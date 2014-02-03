@@ -1,45 +1,38 @@
 <!DOCTYPE html>
 <html lang="en" class="no-js">
 <head>
-	<meta charset="utf-8" />
-	
-	<title>{% if meta.title %}{{ meta.title }} | {% endif %}{{ site_title }}</title>
-{% if meta.description %}
-	<meta name="description" content="{{ meta.description }}"> 
-{% endif %}{% if meta.robots %}
-	<meta name="robots" content="{{ meta.robots }}">
+	<meta charset="utf-8">
+
+	<title>{% if current_page.title %}{{ current_page.title }} - {% endif %}{{ site_title }}</title>
+{% if current_page.description %}
+	<meta name="description" content="{{ current_page.description }}">
+{% endif %}{% if current_page.robots %}
+	<meta name="robots" content="{{ current_page.robots }}">
 {% endif %}
-	
-	<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Open+Sans:400,700" type="text/css" />
-	<link rel="stylesheet" href="{{ theme_url }}/style.css" type="text/css" />
-	
-	<script src="{{ theme_url }}/scripts/modernizr-2.6.1.min.js"></script>
+
+    <link rel="stylesheet" href="{{ theme_url }}/kube.min.css" type="text/css">
+    <link rel="stylesheet" href="{{ theme_url }}/style.css" type="text/css">
 </head>
 <body>
-
-	<header id="header">
-		<div class="inner clearfix">
-			<h1><a href="{{ base_url }}">{{ site_title }}</a></h1>
-			<ul class="nav">
-				{% for page in pages %}
-				<li><a href="{{ page.url }}">{{ page.title }}</a></li>
-				{% endfor %}
-			</ul>
-		</div>
+	<header>
+        <hgroup>
+    		<h1><a href="{{ base_url }}">{{ site_title }}</a></h1>
+        </hgroup>
+		<nav class="nav-g"><ul>
+            {% for page in directory('/') %}
+            {% if page.url != '/404' %}
+            <li><a href="{{ page.url }}">{{ page.title }}</a></li>
+            {% endif %}
+            {% endfor %}
+		</ul></nav>
 	</header>
 
-	<section id="content">
-		<div class="inner">
-			{{ content }}
-		</div>
+	<section>
+		{{ current_page.content }}
 	</section>
-	
-	<footer id="footer">
-		<div class="inner">
-			<a href="http://pico.dev7studios.com">Pico</a> was made by <a href="http://gilbert.pellegrom.me">Gilbert Pellegrom</a> 
-			from <a href="http://dev7studios.com">Dev7studios</a>.
-		</div>
+
+	<footer>
+		Powered by <a href="https://eiky.net/tinkering/femto/">Femto</a>.
 	</footer>
-    
 </body>
 </html>

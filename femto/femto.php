@@ -146,7 +146,7 @@ function run($site_config=array()) {
         'theme_dir' => $config['theme_dir'].$config['theme'],
         'theme_url' => $config['base_url'].$config['theme_dir'].$config['theme'],
         'site_title' => $config['site_title'],
-        'page' => $current_page,
+        'current_page' => $current_page,
     );
     hook('before_render', array(&$twig_vars, &$twig, &$current_page['template']));
     $output = $twig->render($current_page['template'] .'.html', $twig_vars);
@@ -224,7 +224,7 @@ function page_from_file($file) {
         if(substr($page['content'], 0, 2) == '/*') {
             $meta_block_end = strpos($page['content'], '*/')+2;
             $meta_block = substr($page['content'], 0, $meta_block_end);
-            foreach ($meta as $key) {
+            foreach ($meta as $key => $default) {
                 $match = array();
                 $k = preg_quote($key, '`');
                 if(preg_match('`\*?\s*'.$k.'\s*:([^\r\n]*)`i', $meta_block, $match)) {
