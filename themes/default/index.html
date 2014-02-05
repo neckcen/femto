@@ -17,10 +17,11 @@
 	<header>
         <hgroup>
     		<h1><a href="{{ base_url }}">{{ site_title }}</a></h1>
+            <h2>Straight to the point</h2>
         </hgroup>
 		<nav class="nav-g"><ul>
             {% for page in directory('/') %}
-            {% if page.url != '/404' %}
+            {% if page.relative_url != '/404' %}
             <li><a href="{{ page.url }}">{{ page.title }}</a></li>
             {% endif %}
             {% endfor %}

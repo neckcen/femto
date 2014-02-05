@@ -21,13 +21,6 @@
 // Default: Femto attempts to guess it.
 #$config['base_url'] = '';
 
-// The way dates should be formated. Default: jS M Y (1st Jan 2014).
-// See php's date manual: http://php.net/manual/en/function.date.php
-#$config['date_format'] = 'jS M Y';
-
-// Length (in words) of the excerpt of a page. Default: 50.
-#$config['excerpt_length'] = 50;
-
 // Directory in which pages are located. Default: content/.
 #$config['content_dir'] = 'content/';
 
@@ -43,14 +36,11 @@
 // Directory in which themes are found. Default themes/.
 #$config['theme_dir'] = 'themes/';
 
-// Whether twig should escape variables automatically. Default: true.
-#$config['twig_autoescape'] = true;
-
 // Whether debug mode is enabled for twig. Default: false.
 #$config['twig_debug'] = false;
 
 // A comma separated list of enabled plugins. E.g. gallery,php. Default: empty.
-#$config['plugin_enabled'] => '';
+#$config['plugin_enabled'] = '';
 
 // Directory in which plugins are found. Default: directory in which femto.php
 // is plus plugins/.

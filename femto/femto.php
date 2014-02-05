@@ -43,14 +43,11 @@ function run($site_config=array()) {
     $config = array(
         'site_title' => 'Femto',
         'base_url' => null,
-        'date_format' => 'jS M Y',
-        'excerpt_length' => 50,
         'content_dir' => 'content/',
         'cache_enabled' => true,
         'cache_dir' => 'cache/',
         'theme' => 'default',
         'theme_dir' => 'themes/',
-        'twig_autoescape' => true,
         'twig_debug' => false,
         'plugin_enabled' => '',
         'plugin_dir' => __DIR__.'/plugins/',
@@ -58,12 +55,12 @@ function run($site_config=array()) {
     $config = array_merge($config, $site_config);
     if($config['base_url'] === null) {
         if(isset($_SERVER['PHP_SELF'])) {
-            $config['base_url'] = dirname($_SERVER['PHP_SELF']);
+            $config['base_url'] = dirname($_SERVER['PHP_SELF']).'/';
         } else {
-            $config['base_url'] = '';
+            $config['base_url'] = '/';
         }
     } else {
-        $config['base_url'] = rtrim($config['base_url'], '/');
+        $config['base_url'] = rtrim($config['base_url'], '/').'/';
     }
     $config['content_dir'] = rtrim($config['content_dir'], '/').'/';
     $config['cache_dir'] = rtrim($config['cache_dir'], '/').'/';
@@ -76,7 +73,7 @@ function run($site_config=array()) {
     } else {
         $config['plugin_enabled'] = explode(',', $config['plugin_enabled']);
         foreach($config['plugin_enabled'] as $p) {
-            include($config['plugin_dir'].$p.'/plugin.php');
+            include($config['plugin_dir'].$p.'/'.$p.'.php');
             $plugin[$p] = new $p($config);
         }
     }
@@ -93,11 +90,16 @@ function run($site_config=array()) {
             $url = substr($_SERVER['REQUEST_URI'], 0, $qs);
         }
     }
+    $normal_url = $url;
+    $normal_url = str_replace(array('./', '../'), '', $url);
     if(substr($url, -6) == '/index') {
-        header('Location: '.substr($url, 0, -6));
+        $normal_url = substr($url, 0, -5);
+    }
+    if($normal_url != $url) {
+        header('Location: '.$normal_url);
         exit();
     }
-    $url = substr($url, strlen($config['base_url']));
+    $url = substr($url, strlen($config['base_url'])-1);
     hook('request_url', array(&$url));
 
     // plugin url
@@ -106,9 +108,6 @@ function run($site_config=array()) {
         list(,$p, $url) = $match;
         if(isset($plugin[$p]) && is_callable(array($plugin[$p], 'url'))) {
             $current_page = call_user_func(array($plugin[$p], 'url'), $url);
-            if($current_page == null) {
-                return;
-            }
         }
     // normal page
     } else {
@@ -118,11 +117,11 @@ function run($site_config=array()) {
     if($current_page == null) {
         header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
         $current_page = page('/404');
-        hook('page_not_found', array(&$current_page));
+        hook('request_not_found', array(&$current_page));
     }
+    hook('request_complete', array(&$current_page));
 
     // render
-    hook('before_twig_register');
     \Twig_Autoloader::register();
     $loader = new \Twig_Loader_Filesystem($config['theme_dir'].$config['theme']);
     $cache = false;
@@ -131,13 +130,13 @@ function run($site_config=array()) {
     }
     $settings = array(
         'cache' => $cache,
-        'debug' => $config['twig.debug'],
-        'autoescape' => $config['twig.autoescape'],
+        'debug' => $config['twig_debug'],
+        'autoescape' => false,
     );
     $twig = new \Twig_Environment($loader, $settings);
     $twig->addFunction(new \Twig_SimpleFunction('directory', '\eiky\femto\directory'));
     $twig->addFunction(new \Twig_SimpleFunction('page', '\eiky\femto\page'));
-    if($config['twig.debug']) {
+    if($config['twig_debug']) {
         $twig->addExtension(new \Twig_Extension_Debug());
     }
     $twig_vars = array(
@@ -181,80 +180,62 @@ function page($url) {
  * url - the url corresponding to this page
  * title - the page title (if set in header)
  * description - the page description (if set in header)
- * author - the page author (if set in header)
- * date - the date the page was last edited (if set in header)
- * date_timestamp - timestamp of the date if set
- * date_formated - formated version of the date if set
  * robots - robot meta tag value (if set in header)
  * template - index by default
  * cache - page,directory,template by default
  * content - the content of the page
- * excerpt - an excerpt of the content (length depends on configuration
  * Additional keys can be created by plugins.
  *
  * @param string $file The file to read.
  * @return array Femto page, null if not found.
  */
 function page_from_file($file) {
-    if(($time = @filemtime($file)) === false) {
+    $time = @filemtime($file);
+    if($time === false) {
         return null;
     }
     if(($page = cache_retrieve($file, $time)) === null) {
+        $config =& local::$config;
         $page = array();
         $page['file'] = $file;
-        $page['url'] = '/'.substr($file, strlen(local::$config['content_dir']));
-        $page['url'] = substr($page['url'], -9) == '/index.md' ?
-          substr($page['url'], 0, -8) : substr($page['url'], 0, -3);
+        $page['url'] = substr($file, strlen($config['content_dir']));
+        if(substr($page['url'], -9) == '/index.md') {
+            $page['url'] = substr($page['url'], 0, -8);
+        } else {
+            $page['url'] = substr($page['url'], 0, -3);
+        }
+        $page['relative_url'] = '/'.$page['url'];
+        $page['url'] = $config['base_url'].$page['url'];
 
-        hook('before_load_content', array(&$file));
         $page['content'] = file_get_contents($file);
-        hook('after_load_content', array(&$page['content']));
 
-        $meta = array(
+        $header = array(
             'title' => null,
             'description' => null,
-            'author' => null,
-            'date' => null,
             'robots' => null,
             'template' => 'index',
             'cache' => 'page,directory,template',
         );
-        hook('before_read_file_meta', array(&$meta));
-        $page = array_merge($page, $meta);
+        hook('page_before_read_header', array(&$header));
+        $page = array_merge($page, $header);
         if(substr($page['content'], 0, 2) == '/*') {
-            $meta_block_end = strpos($page['content'], '*/')+2;
-            $meta_block = substr($page['content'], 0, $meta_block_end);
-            foreach ($meta as $key => $default) {
+            $header_block_end = strpos($page['content'], '*/')+2;
+            $header_block = substr($page['content'], 0, $header_block_end);
+            foreach ($header as $key => $default) {
                 $match = array();
-                $k = preg_quote($key, '`');
-                if(preg_match('`\*?\s*'.$k.'\s*:([^\r\n]*)`i', $meta_block, $match)) {
+                $re = '`\*?\s*'.preg_quote($key, '`').'\s*:([^\r\n]*)`i';
+                if(preg_match($re, $header_block, $match)) {
                     $page[$key] = trim($match[1]);
                 }
             }
-            $page['content'] = substr($page['content'], $meta_block_end);
-        }
-        if(!empty($page['date'])) {
-            $page['timestamp'] = strtotime($page['date']);
-            $page['date_formatted'] = date(local::$config['date_format'], $page['timestamp']);
-        } else {
-            $page['timestamp'] = null;
-            $page['date_formatted'] = null;
+            $page['content'] = substr($page['content'], $header_block_end);
         }
         $page['cache'] = explode(',', $page['cache']);
-        hook('after_read_file_meta', array(&$page));
 
-        $page['excerpt'] = explode(' ', strip_tags($page['content']), 51);
-        if(count($page['excerpt']) > 50) {
-            $page['excerpt'][51] = '';
-            $page['excerpt'] = trim(implode(' ', $page['excerpt'])).'…';
-        } else {
-            $page['excerpt'] = $page['content'];
-        }
-
-        hook('before_parse_content', array(&$page['content']));
+        hook('page_before_parse_content', array(&$page));
         $page['content'] = str_replace('%base_url%', $config['base_url'], $page['content']);
         $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
-        hook('after_parse_content', array(&$page['content']));
+        hook('page_complete', array(&$page));
 
         if(in_array('page', $page['cache'])) {
             cache_store($page);
@@ -271,15 +252,16 @@ function page_from_file($file) {
  *
  * @param string $url The url to list.
  * @param string $sort Sorting criteria.
- * @param string $sort_order Sorting order.
+ * @param string $order Sorting order.
  * @return array List of Femto pages with content removed.
  */
-function directory($url, $sort='alpha', $sort_order='asc') {
+function directory($url, $sort='alpha', $order='asc') {
     $file = substr($url, -1) == '/' ? $url : dirname($url).'/';
     $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
       dirname($current_page['file']).'/'.$file;
 
-    if(($time = @filemtime($file.'.')) === false) {
+    $time = @filemtime($file.'.');
+    if($time === false) {
         return array();
     }
     if(($dir = cache_retrieve($file, $time)) === null) {
@@ -303,6 +285,7 @@ function directory($url, $sort='alpha', $sort_order='asc') {
                 }
             }
         }
+        hook('directory_complete', array(&$dir));
         if($cache) {
             cache_store($dir);
         }
@@ -310,18 +293,16 @@ function directory($url, $sort='alpha', $sort_order='asc') {
     //sorting
     if($sort == 'alpha') {
         usort($dir, '\eiky\femto\directory_sort_alpha');
-    } else if($sort == 'date') {
-        usort($dir, '\eiky\femto\directory_sort_date');
     }
     hook('directory_sort', array(&$sort, &$dir));
-    if($sort_order != 'asc') {
+    if($order != 'asc') {
         $dir = array_reverse($dir);
     }
     return $dir;
 }
 
 /**
- * Used to sort director by title.
+ * Used to sort directory by title.
  *
  * @see usort()
  *
@@ -333,20 +314,6 @@ function directory_sort_alpha($a, $b) {
     return strcmp($a['title'], $b['title']);
 }
 
-/**
- * Used to sort director by date.
- *
- * @see usort()
- *
- * @param array $a Page a.
- * @param array $b Page b.
- * @return int 0 if equal, 1 if a > b, -1 if b > a.
- */
-function directory_sort_date($a, $b) {
-    return $a['timestamp'] == $b['timestamp'] ? 0 :
-        ($a['timestamp'] < $b['timestamp'] ? -1 : 1);
-}
-
 
 /**
  * Check if key is in cache and fresher than given time.
@@ -356,7 +323,7 @@ function directory_sort_date($a, $b) {
  * @return mixed Key value, null if expired or not found.
  */
 function cache_retrieve($key, $time) {
-    if(!local::$config['cache_enabled']) {
+    if(!local::$config['cache_enabled'] || isset($_GET['purge'])) {
         return null;
     }
     $hash = md5($key);
