@@ -323,7 +323,7 @@ function directory_sort_alpha($a, $b) {
  * @return mixed Key value, null if expired or not found.
  */
 function cache_retrieve($key, $time) {
-    if(!local::$config['cache_enabled'] || isset($_GET['purge'])) {
+    if(!local::$config['cache_enabled']) {
         return null;
     }
     $hash = md5($key);
@@ -335,7 +335,7 @@ function cache_retrieve($key, $time) {
       $hash
     );
 
-    if(@filemtime($cache) > $time) {
+    if(@filemtime($cache) > $time && !isset($_GET['purge'])) {
         include(local::$current_cache);
         return $value;
     }
