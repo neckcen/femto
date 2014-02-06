@@ -34,6 +34,7 @@ class page_extra {
     public function page_before_read_header(&$header) {
         $header['date'] = null;
         $header['author'] = null;
+        $header['order'] = null;
     }
 
     /**
@@ -62,14 +63,16 @@ class page_extra {
     }
 
     /**
-     * Add date sorting to directory sort.
+     * Add date/order sorting to directory sort.
      *
      * @param array $dir The directory listing to sort.
      * @param string $sort Sorting criteria.
      */
-    public function directory_sort(&$dir, &$sort) {
+    public function directory_sort(&$sort, &$dir) {
         if($sort == 'date') {
             usort($dir, array($this, 'directory_sort_date'));
+        } else if($sort == 'order') {
+            usort($dir, array($this, 'directory_sort_order'));
         }
     }
 
@@ -85,5 +88,19 @@ class page_extra {
     public function directory_sort_date($a, $b) {
         return $a['timestamp'] == $b['timestamp'] ? 0 :
             ($a['timestamp'] < $b['timestamp'] ? -1 : 1);
+    }
+
+    /**
+     * Used to sort directory by order.
+     *
+     * @see usort()
+     *
+     * @param array $a Page a.
+     * @param array $b Page b.
+     * @return int 0 if equal, 1 if a > b, -1 if b > a.
+     */
+    public function directory_sort_order($a, $b) {
+        return $a['order'] == $b['order'] ? 0 :
+            ($a['order'] < $b['order'] ? -1 : 1);
     }
 }
