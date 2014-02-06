@@ -21,7 +21,6 @@ class local {
     public static $config = array();
     public static $plugin = array();
     public static $current_page = null;
-    public static $current_cache = null;
 
     // prevents instances
     private function __construct() {}
@@ -190,11 +189,11 @@ function page($url) {
  * @return array Femto page, null if not found.
  */
 function page_from_file($file) {
-    $time = @filemtime($file);
-    if($time === false) {
+    $cache = Cache::factory($file);
+    if(!$cache) {
         return null;
     }
-    if(($page = cache_retrieve($file, $time)) === null) {
+    if(($page = $cache->retrieve()) == null) {
         $config =& local::$config;
         $page = array();
         $page['file'] = $file;
@@ -238,10 +237,9 @@ function page_from_file($file) {
         hook('page_complete', array(&$page));
 
         if(in_array('page', $page['cache'])) {
-            cache_store($page);
+            $cache->store($page);
         }
     }
-
     return $page;
 }
 
@@ -260,13 +258,13 @@ function directory($url, $sort='alpha', $order='asc') {
     $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
       dirname($current_page['file']).'/'.$file;
 
-    $time = @filemtime($file.'.');
-    if($time === false) {
+    $cache = Cache::factory($file.'.');
+    if(!$cache) {
         return array();
     }
-    if(($dir = cache_retrieve($file, $time)) === null) {
+    if(($dir = $cache->retrieve()) == null) {
         $dir = array();
-        $cache = true;
+        $cache_allowed = true;
         foreach(scandir($file) as $f) {
             if($f == '.' || $f == '..') {
                 continue;
@@ -279,15 +277,15 @@ function directory($url, $sort='alpha', $order='asc') {
                 if($page !== null) {
                     unset($page['content']);
                     if(!in_array('directory', $page['cache'])) {
-                        $cache = false;
+                        $cache_allowed = false;
                     }
                     $dir[] = $page;
                 }
             }
         }
         hook('directory_complete', array(&$dir));
-        if($cache) {
-            cache_store($dir);
+        if($cache_allowed) {
+            $cache->store($dir);
         }
     }
     //sorting
@@ -316,48 +314,6 @@ function directory_sort_alpha($a, $b) {
 
 
 /**
- * Check if key is in cache and fresher than given time.
- *
- * @param mixed $key Cache key.
- * @param int $time Timestamp for when the reference was last modified.
- * @return mixed Key value, null if expired or not found.
- */
-function cache_retrieve($key, $time) {
-    if(!local::$config['cache_enabled']) {
-        return null;
-    }
-    $hash = md5($key);
-    local::$current_cache = sprintf(
-      '%sfemto/%s/%s/%s.php',
-      local::$config['cache_dir'],
-      substr($hash, 0, 2),
-      substr($hash, 2, 2),
-      $hash
-    );
-
-    if(@filemtime($cache) > $time && !isset($_GET['purge'])) {
-        include(local::$current_cache);
-        return $value;
-    }
-    return null;
-}
-
-
-/**
- * Store a value in the cache for the last key checked.
- *
- * @param mixed $value Cache value.
- */
-function cache_store($value) {
-    if(!local::$config['cache_enabled']) {
-        return;
-    }
-    @mkdir(dirname(local::$current_cache), 0777, true);
-    file_put_contents(local::$current_cache,
-      sprintf('<?php $value = %s;', var_export($value, true)));
-}
-
-/**
  * Run a hook on all loaded plugins.
  *
  * @param string $hook Hook name.
@@ -368,5 +324,91 @@ function hook($hook, $args=array()) {;
         if(is_callable(array($p, $hook))){
             call_user_func_array(array($p, $hook), $args);
         }
+    }
+}
+
+
+/**
+ * Simple cache system storing information related to one file.
+ *
+ */
+class Cache {
+    protected $file;
+    protected $modified;
+    protected $cache_file = null;
+
+    /**
+     * Construct a cache object associated with file.
+     *
+     * @param string $file File associated to this cache instance.
+     * @param int $modified Time when this file was last modified.
+     */
+    protected function __construct($file, $modified) {
+        $this->file = $file;
+        $this->modified = $modified;
+    }
+
+    /**
+     * Compute the cache file when needed.
+     *
+     * @return string Cache file corresponding to the original file.
+     */
+    protected function file() {
+        if($this->cache_file === null) {
+            $hash = md5($this->file);
+            $this->cache_file = sprintf(
+              '%sfemto/%s/%s/%s.php',
+              local::$config['cache_dir'],
+              substr($hash, 0, 2),
+              substr($hash, 2, 2),
+              $hash
+            );
+        }
+        return $this->cache_file;
+    }
+
+    /**
+     * Check if there is data in cache.
+     *
+     * @return mixed Cached data, null if expired or not found.
+     */
+    public function retrieve() {
+        if(!local::$config['cache_enabled']) {
+            return null;
+        }
+
+        if(@filemtime($this->file()) > $this->modified && !isset($_GET['purge'])) {
+            include($this->file());
+            return $value;
+        }
+        return null;
+    }
+
+    /**
+     * Store a value in the cache.
+     *
+     * @param mixed $value Value to cache.
+     */
+    public function store($value) {
+        if(!local::$config['cache_enabled']) {
+            return;
+        }
+        @mkdir(dirname($this->file()), 0777, true);
+        file_put_contents($this->file(),
+          sprintf('<?php $value = %s;', var_export($value, true)));
+    }
+
+    /**
+     * Create a cache object for the given file.
+     *
+     * @param string $file A file to associate with this cache.
+     * @return Cache object or false if the file doesn't exist.
+     */
+    public static function factory($file) {
+        $time = @filemtime($file);
+        if(!$time) {
+            return false;
+        }
+        return new self($file, $time);
     }
 }
