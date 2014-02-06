@@ -61,6 +61,7 @@ class gallery {
         $gallery = '<div class="gallery"><style scoped>'.
           'ul {list-style-type:none;margin:0;padding:0;}'.
           'li, a, img {display:inline-block;margin:0;padding:0;}'.
+          'a{text-decoration:none;}'.
           '</style><ul>';
         $directory = substr($directory, strlen($this->config['content_dir']));
         $url = $this->config['base_url'].'plugin/image';

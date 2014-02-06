@@ -137,7 +137,7 @@ class image {
      */
     public function page_before_parse_content(&$page) {
         $match = array();
-        $re = '`!\[([^\]]*)\]\(([^\) ]+)(?: ([0-9]+)(?:x([0-9]+))?)?(?: "([^"]*)")?\)`';
+        $re = '`!\[([^\]]*)\]\(([^\) ]+)(?: ([<>]?)([0-9]+)(?:x([0-9]+))?)?(?: "([^"]*)")?\)`';
         if(preg_match_all($re, $page['content'], $match, PREG_SET_ORDER)) {
             $url = $this->config['base_url'].'plugin/'.__CLASS__;
             foreach ($match as $m) {
@@ -145,21 +145,29 @@ class image {
                 if(substr($file, 0, 7) == 'http://') {
                     continue;
                 }
-                $width = isset($m[3]) ? $m[3] : null;
-                $height = isset($m[4]) ? $m[4] : null;
-                $caption = isset($m[5]) ? $m[5] : null;
+                $align = isset($m[3]) ? $m[3] : 'center';
+                $width = isset($m[4]) ? $m[4] : null;
+                $height = isset($m[5]) ? $m[5] : null;
+                $caption = isset($m[6]) ? $m[6] : null;
                 if($file[0] != '/') {
                     $file = dirname($page['file']).'/'.$file;
                     $file = substr($file, strlen($this->config['content_dir']));
                 }
                 if($width) {
+                    if($align == '<') {
+                        $align = 'left';
+                    }
+                    if($align == '>') {
+                        $align = 'right';
+                    }
                     if($caption) {
                         $caption = '<figcaption>'.$caption.'</figcaption>';
                     }
                     $parsed = sprintf(
-                      '<figure><a href="%s/%s">'.
+                      '<figure class="%s"><a href="%s/%s">'.
                       '<img src="%s/%s?w=%d&amp;h=%d" alt="%s"/></a>%s</figure>',
-                      $url, $file, $url, $file, $width, $height, $alt, $caption
+                      $align, $url, $file,
+                      $url, $file, $width, $height, $alt, $caption
                     );
                 } else {
                     $parsed = sprintf(
