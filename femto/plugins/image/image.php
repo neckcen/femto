@@ -114,14 +114,15 @@ class image {
     }
 
     /**
-     * Search for images and process them. Images starting with "http://" are
-     * ignored. If the file name starts with "/" it is treated as relative to
-     * content_dir. Othwerise the script looks for it in the same directory as
-     * the page.
+     * Search for images and process them.
+     * File names starting with "http(s)://", "ftp://", "//" or "/" are ignored.
+     * File names starting with "content://" will be treated as relative to
+     * content_dir. Other names are looked up in the current page's directory.
      *
      * Examples:
      * ![alt text](http://example.tld/file.jpg) - unchanged
-     * ![alt text](/file.jpg) - matched to content_dir/file.jpg
+     * ![alt text](/file.jpg) - unchanged
+     * ![alt text](content://file.jpg) - matched to content_dir/file.jpg
      * ![alt text](file.jpg) - matched to current_page_dir/file.jpg
      *
      * Additionally, a dimension can be put after the file name to create a
@@ -137,36 +138,41 @@ class image {
      */
     public function page_before_parse_content(&$page) {
         $match = array();
-        $re = '`!\[([^\]]*)\]\(([^\) ]+)(?: ([<>]?)([0-9]+)(?:x([0-9]+))?)?(?: "([^"]*)")?\)`';
+        $re = '`!\[([^\]]*)\]\(([^\) ]+)'.
+          '(?: ([<>])?([0-9]+)(?:x([0-9]+))?)?'.
+          '(?: "([^"]*)")?\)`';
         if(preg_match_all($re, $page['content'], $match, PREG_SET_ORDER)) {
             $url = $this->config['base_url'].'plugin/'.__CLASS__;
             foreach ($match as $m) {
                 list($tag, $alt, $file) = $m;
-                if(substr($file, 0, 7) == 'http://') {
+                if(preg_match('`^(https?:/|ftp:/|/)?/`', $file)) {
                     continue;
                 }
-                $align = isset($m[3]) ? $m[3] : 'center';
+                $align = isset($m[3]) ? $m[3] : null;
                 $width = isset($m[4]) ? $m[4] : null;
                 $height = isset($m[5]) ? $m[5] : null;
                 $caption = isset($m[6]) ? $m[6] : null;
-                if($file[0] != '/') {
+                if(substr($file, 0, 10) == 'content://') {
+                    $file = substr($file, 9);
+                } else {
                     $file = dirname($page['file']).'/'.$file;
                     $file = substr($file, strlen($this->config['content_dir']));
                 }
                 if($width) {
                     if($align == '<') {
                         $align = 'left';
-                    }
-                    if($align == '>') {
+                    } else if($align == '>') {
                         $align = 'right';
+                    } else {
+                        $align = 'center';
                     }
                     if($caption) {
                         $caption = '<figcaption>'.$caption.'</figcaption>';
                     }
                     $parsed = sprintf(
-                      '<figure class="%s"><a href="%s/%s">'.
+                      '<figure class="%s" style="width:%dpx;"><a href="%s/%s">'.
                       '<img src="%s/%s?w=%d&amp;h=%d" alt="%s"/></a>%s</figure>',
-                      $align, $url, $file,
+                      $align, $width, $url, $file,
                       $url, $file, $width, $height, $alt, $caption
                     );
                 } else {
