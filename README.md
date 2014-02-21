@@ -1,6 +1,8 @@
-Pico
-====
+Femto
+=====
+Requires:
 
-Pico is a stupidly simple, blazing fast, flat file CMS. See http://pico.dev7studios.com for more info.
+* PHP 5.3+
+* mod_rewrite or equivalent
 
-[![I Love Open Source](http://www.iloveopensource.io/images/logo-lightbg.png)](http://www.iloveopensource.io/projects/524c55dcca7964c617000756)
+Check [full documentation](https://eiky.net/tinkering/femto/) for more details.
