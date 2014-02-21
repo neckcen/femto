@@ -292,7 +292,7 @@ function directory($url, $sort='alpha', $order='asc') {
     if($sort == 'alpha') {
         usort($dir, '\eiky\femto\directory_sort_alpha');
     }
-    hook('directory_sort', array(&$sort, &$dir));
+    hook('directory_sort', array(&$dir, &$sort));
     if($order != 'asc') {
         $dir = array_reverse($dir);
     }

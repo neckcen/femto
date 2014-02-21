@@ -68,7 +68,7 @@ class page_extra {
      * @param array $dir The directory listing to sort.
      * @param string $sort Sorting criteria.
      */
-    public function directory_sort(&$sort, &$dir) {
+    public function directory_sort(&$dir, &$sort) {
         if($sort == 'date') {
             usort($dir, array($this, 'directory_sort_date'));
         } else if($sort == 'order') {
