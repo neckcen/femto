@@ -58,11 +58,8 @@ class gallery {
         $row = round($total_width/$display_width);
         $distribution = $this->linear_partition($ratio_list, $row);
 
-        $gallery = '<div class="gallery"><style scoped>'.
-          'ul {list-style-type:none;margin:0;padding:0;}'.
-          'li, a, img {display:inline-block;margin:0;padding:0;}'.
-          'a{text-decoration:none;}'.
-          '</style><ul>';
+        $gallery = sprintf('<div class="gallery" style="width:%dpx"><ul>',
+            $display_width);
         $directory = substr($directory, strlen($this->config['content_dir']));
         $url = $this->config['base_url'].'plugin/image';
         foreach($distribution as $row) {
@@ -86,8 +83,9 @@ class gallery {
             foreach($row as $k => $ratio) {
                 $file = $directory.array_shift($picture_by_ratio[$ratio]);
                 $gallery .= sprintf(
-                  '<li><a href="%s/%s"><img src="%s/%s?w=%d&amp;h=%d" alt=""/></a></li>',
-                  $url, $file, $url, $file, $width[$k], $height
+                  '<li style="width:%f%%"><a href="%s/%s">'.
+                  '<img src="%s/%s?w=%d&amp;h=%d" alt=""/></a></li>',
+                  $width[$k]/6, $url, $file, $url, $file, $width[$k], $height
                 );
             }
         }
