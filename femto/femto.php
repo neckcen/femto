@@ -133,6 +133,9 @@ function run($site_config=array()) {
         'autoescape' => false,
     );
     $twig = new \Twig_Environment($loader, $settings);
+    if(isset($_GET['purge'])) {
+        $twig->clearCacheFiles();
+    }
     $twig->addFunction(new \Twig_SimpleFunction('directory', '\eiky\femto\directory'));
     $twig->addFunction(new \Twig_SimpleFunction('page', '\eiky\femto\page'));
     if($config['twig_debug']) {
@@ -197,11 +200,11 @@ function page_from_file($file) {
         $config =& local::$config;
         $page = array();
         $page['file'] = $file;
-        $page['url'] = substr($file, strlen($config['content_dir']));
+        $page['url'] = substr($file, strlen($config['content_dir'])-1);
         if(substr($page['url'], -9) == '/index.md') {
-            $page['url'] = substr($page['url'], 0, -8);
+            $page['url'] = substr($page['url'], 1, -8);
         } else {
-            $page['url'] = substr($page['url'], 0, -3);
+            $page['url'] = substr($page['url'], 1, -3);
         }
         $page['relative_url'] = '/'.$page['url'];
         $page['url'] = $config['base_url'].$page['url'];
@@ -292,7 +295,7 @@ function directory($url, $sort='alpha', $order='asc') {
     if($sort == 'alpha') {
         usort($dir, '\eiky\femto\directory_sort_alpha');
     }
-    hook('directory_sort', array(&$dir, &$sort));
+    hook('directory_sort', array(&$sort, &$dir));
     if($order != 'asc') {
         $dir = array_reverse($dir);
     }
