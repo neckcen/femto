@@ -1,11 +1,13 @@
 <?php
 
+namespace femto\plugin;
+
 /**
  * A plugin for Femto to make working with images easier.
  *
  * @author Sylvain Didelot
  */
-class image {
+class Image {
     protected $config;
 
     /**
@@ -29,9 +31,8 @@ class image {
         if($time == false) {
             return;
         }
-        $header = apache_request_headers();
-        $header = isset($header['If-Modified-Since']) ?
-          strtotime($header['If-Modified-Since']) : 0;
+        $header = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ?
+          strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) : 0;
         if($header >= $time) {
             header($_SERVER['SERVER_PROTOCOL'].' 304 Not Modified');
             exit();
@@ -39,7 +40,7 @@ class image {
         header('Last-Modified: '.date(DATE_RFC1123, $time));
 
         // width not set, display the full image
-        if(!isset($_GET['w'])) {
+        if(empty($_GET['w'])) {
             $info = @getimagesize($file);
             if($info) {
                 header('Content-type: '.$info['mime']);
@@ -136,22 +137,18 @@ class image {
      *
      * @param array $page Femto page.
      */
-    public function page_before_parse_content(&$page) {
+    public function page_complete(&$page) {
         $match = array();
-        $re = '`!\[([^\]]*)\]\(([^\) ]+)'.
-          '(?: ([<>])?([0-9]+)(?:x([0-9]+))?)?'.
-          '(?: "([^"]*)")?\)`';
+        $re = '`(?:<p>)?<img src="([^"]+)" '.
+          'alt="(?:(&[lg]t;)?([0-9]+)(?:x([0-9]+))? )?([^"]*)" '.
+          '(?:title="([^"]+)" )/>(?:</p>)?`';
         if(preg_match_all($re, $page['content'], $match, PREG_SET_ORDER)) {
-            $url = $this->config['base_url'].'plugin/'.__CLASS__;
+            $url = $this->config['base_url'].'plugin/image';
             foreach ($match as $m) {
-                list($tag, $alt, $file) = $m;
+                list($tag, $file, $align, $width, $height, $alt, $caption) = $m;
                 if(preg_match('`^(https?:/|ftp:/|/)?/`', $file)) {
                     continue;
                 }
-                $align = isset($m[3]) ? $m[3] : null;
-                $width = isset($m[4]) ? $m[4] : null;
-                $height = isset($m[5]) ? $m[5] : null;
-                $caption = isset($m[6]) ? $m[6] : null;
                 if(substr($file, 0, 10) == 'content://') {
                     $file = substr($file, 9);
                 } else {
@@ -159,9 +156,9 @@ class image {
                     $file = substr($file, strlen($this->config['content_dir']));
                 }
                 if($width) {
-                    if($align == '<') {
+                    if($align == '&lt;') {
                         $align = 'left';
-                    } else if($align == '>') {
+                    } else if($align == '&gt;') {
                         $align = 'right';
                     } else {
                         $align = 'center';

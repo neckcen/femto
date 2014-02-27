@@ -8,7 +8,7 @@
  * @version 0.2
  */
 
-namespace eiky\femto;
+namespace femto;
 
 require __DIR__.'/vendor/michelf/php-markdown/Michelf/MarkdownExtra.inc.php';
 require __DIR__.'/vendor/twig/twig/lib/Twig/Autoloader.php';
@@ -37,6 +37,7 @@ function run($site_config=array()) {
     $config =& local::$config;
     $plugin =& local::$plugin;
     $current_page =& local::$current_page;
+    $template_dir = array();
 
     // config
     $config = array(
@@ -71,9 +72,11 @@ function run($site_config=array()) {
         $config['plugin_enabled'] = array();
     } else {
         $config['plugin_enabled'] = explode(',', $config['plugin_enabled']);
-        foreach($config['plugin_enabled'] as $p) {
-            include($config['plugin_dir'].$p.'/'.$p.'.php');
-            $plugin[$p] = new $p($config);
+        foreach($config['plugin_enabled'] as $P) {
+            $p = strtolower($P);
+            include($config['plugin_dir'].$p.'.php');
+            $P = __NAMESPACE__.'\plugin\\'.$P;
+            $plugin[$p] = new $P($config);
         }
     }
 
@@ -107,6 +110,7 @@ function run($site_config=array()) {
         list(,$p, $url) = $match;
         if(isset($plugin[$p]) && is_callable(array($plugin[$p], 'url'))) {
             $current_page = call_user_func(array($plugin[$p], 'url'), $url);
+            $template_dir[] = $config['plugin_dir'].$p;
         }
     // normal page
     } else {
@@ -122,7 +126,8 @@ function run($site_config=array()) {
 
     // render
     \Twig_Autoloader::register();
-    $loader = new \Twig_Loader_Filesystem($config['theme_dir'].$config['theme']);
+    $template_dir[] = $config['theme_dir'].$config['theme'];
+    $loader = new \Twig_Loader_Filesystem($template_dir);
     $cache = false;
     if($config['cache_enabled'] && in_array('template', $current_page['cache'])) {
         $cache = $config['cache_dir'].'twig';
@@ -136,8 +141,8 @@ function run($site_config=array()) {
     if(isset($_GET['purge'])) {
         $twig->clearCacheFiles();
     }
-    $twig->addFunction(new \Twig_SimpleFunction('directory', '\eiky\femto\directory'));
-    $twig->addFunction(new \Twig_SimpleFunction('page', '\eiky\femto\page'));
+    $twig->addFunction(new \Twig_SimpleFunction('directory', __NAMESPACE__.'\directory'));
+    $twig->addFunction(new \Twig_SimpleFunction('page', __NAMESPACE__ .'\page'));
     if($config['twig_debug']) {
         $twig->addExtension(new \Twig_Extension_Debug());
     }
@@ -293,7 +298,7 @@ function directory($url, $sort='alpha', $order='asc') {
     }
     //sorting
     if($sort == 'alpha') {
-        usort($dir, '\eiky\femto\directory_sort_alpha');
+        usort($dir, __NAMESPACE__.'\\directory_sort_alpha');
     }
     hook('directory_sort', array(&$dir, &$sort));
     if($order != 'asc') {
