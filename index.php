@@ -48,4 +48,4 @@
 
 // Do not touch anything below.
 require 'femto/femto.php';
-\eiky\femto\run($config);
+\femto\run($config);

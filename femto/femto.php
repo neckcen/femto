@@ -53,15 +53,10 @@ function run($site_config=array()) {
         'plugin_dir' => __DIR__.'/plugins/',
     );
     $config = array_merge($config, $site_config);
-    if($config['base_url'] === null) {
-        if(isset($_SERVER['PHP_SELF'])) {
-            $config['base_url'] = dirname($_SERVER['PHP_SELF']).'/';
-        } else {
-            $config['base_url'] = '/';
-        }
-    } else {
-        $config['base_url'] = rtrim($config['base_url'], '/').'/';
+    if($config['base_url'] === null && isset($_SERVER['PHP_SELF'])) {
+        $config['base_url'] = dirname($_SERVER['PHP_SELF']);
     }
+    $config['base_url'] = rtrim($config['base_url'], '/').'/';
     $config['content_dir'] = rtrim($config['content_dir'], '/').'/';
     $config['cache_dir'] = rtrim($config['cache_dir'], '/').'/';
     $config['theme_dir'] = rtrim($config['theme_dir'], '/').'/';
