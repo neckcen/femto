@@ -124,7 +124,7 @@ function run($site_config=array()) {
     $template_dir[] = $config['theme_dir'].$config['theme'];
     $loader = new \Twig_Loader_Filesystem($template_dir);
     $cache = false;
-    if($config['cache_enabled'] && in_array('template', $current_page['cache'])) {
+    if($config['cache_enabled'] && !in_array('template', $current_page['no-cache'])) {
         $cache = $config['cache_dir'].'twig';
     }
     $settings = array(
@@ -216,7 +216,7 @@ function page_from_file($file) {
             'description' => null,
             'robots' => null,
             'template' => 'index',
-            'cache' => 'page,directory,template',
+            'no-cache' => '',
         );
         hook('page_before_read_header', array(&$header));
         $page = array_merge($page, $header);
@@ -232,14 +232,14 @@ function page_from_file($file) {
             }
             $page['content'] = substr($page['content'], $header_block_end);
         }
-        $page['cache'] = explode(',', $page['cache']);
+        $page['no-cache'] = explode(',', $page['no-cache']);
 
         hook('page_before_parse_content', array(&$page));
         $page['content'] = str_replace('%base_url%', $config['base_url'], $page['content']);
         $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
         hook('page_complete', array(&$page));
 
-        if(in_array('page', $page['cache'])) {
+        if(!in_array('page', $page['no-cache'])) {
             $cache->store($page);
         }
     }
@@ -279,7 +279,7 @@ function directory($url, $sort='alpha', $order='asc') {
                 $page = page_from_file($file.$f);
                 if($page !== null) {
                     unset($page['content']);
-                    if(!in_array('directory', $page['cache'])) {
+                    if(in_array('directory', $page['no-cache'])) {
                         $cache_allowed = false;
                     }
                     $dir[] = $page;
