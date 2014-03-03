@@ -12,7 +12,7 @@ Requirements
 Installation
 ------------
 
-1. [Get the latest version.](https://github.com/neckcen/femto/releases)
+1. [Get the latest version.](https://github.com/neckcen/femto/releases/latest)
 2. Unzip it.
 3. Upload it to your server.
 4. Make sure the `cache` directory is writable.
