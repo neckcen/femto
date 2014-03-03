@@ -107,11 +107,11 @@ Pages are returned without their content.
 
 Example use:
 
-    &lt;nav&gt;&lt;ul&gt;
+    <nav><ul>
         {% for page in directory('/') %}
-        &lt;li&gt;&lt;a href=&quot;{{ page.url }}&quot;&gt;{{ page.title }}&lt;/a&gt;&lt;/li&gt;
+        <li><a href="{{ page.url }}">{{ page.title }}</a></li>
         {% endfor %}
-    &lt;/ul&gt;&lt;/nav&gt;
+    </ul></nav>
 
 Cache
 -----
