@@ -137,7 +137,7 @@ the end of the url (e.g. `http://example.com/sub/page?purge=1`).
 Plugins
 -------
 
-[See the dedicated repository](https://github.com/neckcen/femto-plugin)
+[See the dedicated repository.](https://github.com/neckcen/femto-plugin)
 
 Credits
 -------
