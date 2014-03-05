@@ -15,14 +15,14 @@ Installation
 1. [Get the latest version.](https://github.com/neckcen/femto/releases/latest)
 2. Unzip it.
 3. Upload it to your server.
-4. Make sure the `cache` directory is writable.
+4. Make sure the `cache` directory is writeable.
 5. (Optional) customise the settings by editing `index.php` in the root Femto
 directory.
 6. (Non Apache users) Set up URL rewriting to point to `index.php`.
 
 Creating Content
 ----------------
-Femto is a flat file CMS, this means there is no administration backend and
+Femto is a flat file CMS, this means there is no administration backend or
 database to deal with. You simply create `.md` files in the `content` folder
 and that becomes a page.
 
@@ -32,7 +32,7 @@ an `index.md` inside it, you can access that folder at the URL
 simply create a text file with the corresponding name (e.g.
 `content/sub/page.md`) and you will be able to access it from the URL
 `http://example.com/sub/page`. Below are some examples of content
-locations and their corresponing URL's:
+locations and their corresponding URL's:
 
 Physical Location           | URL
 --------------------------- | --------------------------------
@@ -69,7 +69,7 @@ Themes
 ------
 You can create themes for your Femto installation in the "themes" folder. Check
 out the default theme for an example. Femto uses
-[Twig](http://twig.sensiolabs.org/documentation) for it's templating engine. You
+[Twig](http://twig.sensiolabs.org/documentation) for it's template engine. You
 can select your theme by setting the `$config['theme']` variable in `index.php`.
 
 All themes must include an `index.html` file to define the HTML structure of the
@@ -142,7 +142,7 @@ Plugins
 Credits
 -------
 
-Femto is developped by Sylvain Didelot.
+Femto is developed by Sylvain Didelot.
 
 It is originally a fork of [Pico](http://pico.dev7studios.com/) by Gilbert
 Pellegrom and make use of the following libraries:
