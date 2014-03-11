@@ -7,11 +7,8 @@ Welcome to Femto
 ================
 
 Congratulations, you have successfully installed Femto. Femto is an
-[open source](https://github.com/neckcen/Femto) minimalist and efficient flat
+[open source](https://github.com/neckcen/femto) minimalist and efficient flat
 file content management system.
-
-Femto is based on [Pico 0.8](http://pico.dev7studios.com/) by Gilbert Pellegrom.
-
 
 Creating Content
 ----------------
@@ -69,4 +66,4 @@ More
 ----
 The above is enough to get a basic website up, for more information on plugins,
 themes and such check out the
-[full documentation](https://eiky.net/tinkering/femto/).
+[project page](https://github.com/neckcen/femto).
