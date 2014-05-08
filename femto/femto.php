@@ -121,7 +121,7 @@ function run($site_config=array()) {
 
     // render
     \Twig_Autoloader::register();
-    $template_dir[] = $config['theme_dir'].$config['theme'];
+    array_unshift($template_dir, $config['theme_dir'].$config['theme']);
     $loader = new \Twig_Loader_Filesystem($template_dir);
     $cache = false;
     if($config['cache_enabled'] && !in_array('template', $current_page['no-cache'])) {
