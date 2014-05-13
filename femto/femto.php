@@ -206,8 +206,6 @@ function page_from_file($file) {
         } else {
             $page['url'] = substr($page['url'], 1, -3);
         }
-        $page['relative_url'] = '/'.$page['url'];
-        $page['url'] = $config['base_url'].$page['url'];
 
         $page['content'] = file_get_contents($file);
 
@@ -236,6 +234,7 @@ function page_from_file($file) {
 
         hook('page_before_parse_content', array(&$page));
         $page['content'] = str_replace('%base_url%', $config['base_url'], $page['content']);
+        $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
         $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
         hook('page_complete', array(&$page));
 
