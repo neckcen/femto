@@ -15,14 +15,14 @@
 </head>
 <body>
 	<header>
-        <a href="{{ base_url }}"><hgroup>
+        <a href="{{ base_url }}/"><hgroup>
     		<h1>{{ site_title }}</h1>
             <h2>minimalist &amp; efficient</h2>
         </hgroup></a>
 		<nav class="nav-g"><ul>
             {% for page in directory('/') %}
-            {% if page.relative_url != '/404' %}
-            <li><a href="{{ page.url }}">{{ page.title }}</a></li>
+            {% if page.url != '/404' %}
+            <li><a href="{{base_url}}{{ page.url }}">{{ page.title }}</a></li>
             {% endif %}
             {% endfor %}
 		</ul></nav>

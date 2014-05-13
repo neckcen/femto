@@ -56,7 +56,7 @@ function run($site_config=array()) {
     if($config['base_url'] === null && isset($_SERVER['PHP_SELF'])) {
         $config['base_url'] = dirname($_SERVER['PHP_SELF']);
     }
-    $config['base_url'] = rtrim($config['base_url'], '/').'/';
+    $config['base_url'] = rtrim($config['base_url'], '/');
     $config['content_dir'] = rtrim($config['content_dir'], '/').'/';
     $config['cache_dir'] = rtrim($config['cache_dir'], '/').'/';
     $config['theme_dir'] = rtrim($config['theme_dir'], '/').'/';
@@ -96,7 +96,11 @@ function run($site_config=array()) {
         header('Location: '.$normal_url);
         exit();
     }
-    $url = substr($url, strlen($config['base_url'])-1);
+    if($config['base_url'] != '' && strpos($url, $config['base_url']) === 0) {
+        $url = substr($url, strlen($config['base_url']));
+    } else {
+        $url = '/';
+    }
     hook('request_url', array(&$url));
 
     // plugin url
@@ -144,8 +148,7 @@ function run($site_config=array()) {
     $twig_vars = array(
         'config' => $config,
         'base_url' => $config['base_url'],
-        'theme_dir' => $config['theme_dir'].$config['theme'],
-        'theme_url' => $config['base_url'].$config['theme_dir'].$config['theme'],
+        'theme_url' => $config['base_url'].'/'.$config['theme_dir'].$config['theme'],
         'site_title' => $config['site_title'],
         'current_page' => $current_page,
     );
@@ -202,9 +205,9 @@ function page_from_file($file) {
         $page['file'] = $file;
         $page['url'] = substr($file, strlen($config['content_dir'])-1);
         if(substr($page['url'], -9) == '/index.md') {
-            $page['url'] = substr($page['url'], 1, -8);
+            $page['url'] = substr($page['url'], 0, -8);
         } else {
-            $page['url'] = substr($page['url'], 1, -3);
+            $page['url'] = substr($page['url'], 0, -3);
         }
 
         $page['content'] = file_get_contents($file);
