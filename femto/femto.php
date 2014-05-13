@@ -96,10 +96,12 @@ function run($site_config=array()) {
         header('Location: '.$normal_url);
         exit();
     }
-    if($config['base_url'] != '' && strpos($url, $config['base_url']) === 0) {
-        $url = substr($url, strlen($config['base_url']));
-    } else {
-        $url = '/';
+    if($config['base_url'] != '') {
+        if(strpos($url, $config['base_url']) === 0) {
+            $url = substr($url, strlen($config['base_url']));
+        } else {
+            $url = '/';
+        }
     }
     hook('request_url', array(&$url));
 
