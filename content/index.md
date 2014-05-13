@@ -61,6 +61,8 @@ These values will be contained in the `{{ current_page }}` variable in themes
 There are also certain variables that you can use in your text files:
 
 * <code>&#37;base_url&#37;</code> - The URL to your Femto site
+* <code>&#37;self_url&#37;</code> - The URL to the current page (relative to 
+the base url)
 
 More
 ----
