@@ -5,7 +5,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 2.1
+ * @version 3.0
  */
 
 namespace femto;
