@@ -38,3 +38,15 @@ footer {
     line-height:1.1em;
     padding:.5em .1em 1em;
 }
+
+@media print {
+    p {
+        color:black;
+    }
+    header {
+        display:none;
+    }
+    footer {
+        display:none;
+    }
+}
