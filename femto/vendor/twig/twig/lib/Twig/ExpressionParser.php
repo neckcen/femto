@@ -164,6 +164,21 @@ class Twig_ExpressionParser
                     $this->parser->getStream()->next();
                     $node = new Twig_Node_Expression_Name($token->getValue(), $token->getLine());
                     break;
+                } elseif (isset($this->unaryOperators[$token->getValue()])) {
+                    $class = $this->unaryOperators[$token->getValue()]['class'];
+
+                    $ref = new ReflectionClass($class);
+                    $negClass = 'Twig_Node_Expression_Unary_Neg';
+                    $posClass = 'Twig_Node_Expression_Unary_Pos';
+                    if (!(in_array($ref->getName(), array($negClass, $posClass)) || $ref->isSubclassOf($negClass) || $ref->isSubclassOf($posClass))) {
+                        throw new Twig_Error_Syntax(sprintf('Unexpected unary operator "%s"', $token->getValue()), $token->getLine(), $this->parser->getFilename());
+                    }
+
+                    $this->parser->getStream()->next();
+                    $expr = $this->parsePrimaryExpression();
+
+                    $node = new $class($expr, $token->getLine());
+                    break;
                 }
 
             default:
@@ -172,7 +187,7 @@ class Twig_ExpressionParser
                 } elseif ($token->test(Twig_Token::PUNCTUATION_TYPE, '{')) {
                     $node = $this->parseHashExpression();
                 } else {
-                    throw new Twig_Error_Syntax(sprintf('Unexpected token "%s" of value "%s"', Twig_Token::typeToEnglish($token->getType(), $token->getLine()), $token->getValue()), $token->getLine(), $this->parser->getFilename());
+                    throw new Twig_Error_Syntax(sprintf('Unexpected token "%s" of value "%s"', Twig_Token::typeToEnglish($token->getType()), $token->getValue()), $token->getLine(), $this->parser->getFilename());
                 }
         }
 
@@ -263,7 +278,7 @@ class Twig_ExpressionParser
             } else {
                 $current = $stream->getCurrent();
 
-                throw new Twig_Error_Syntax(sprintf('A hash key must be a quoted string, a number, a name, or an expression enclosed in parentheses (unexpected token "%s" of value "%s"', Twig_Token::typeToEnglish($current->getType(), $current->getLine()), $current->getValue()), $current->getLine(), $this->parser->getFilename());
+                throw new Twig_Error_Syntax(sprintf('A hash key must be a quoted string, a number, a name, or an expression enclosed in parentheses (unexpected token "%s" of value "%s"', Twig_Token::typeToEnglish($current->getType()), $current->getValue()), $current->getLine(), $this->parser->getFilename());
             }
 
             $stream->expect(Twig_Token::PUNCTUATION_TYPE, ':', 'A hash key must be followed by a colon (:)');
@@ -318,7 +333,7 @@ class Twig_ExpressionParser
                     throw new Twig_Error_Syntax('The "attribute" function takes at least two arguments (the variable and the attributes)', $line, $this->parser->getFilename());
                 }
 
-                return new Twig_Node_Expression_GetAttr($args->getNode(0), $args->getNode(1), count($args) > 2 ? $args->getNode(2) : new Twig_Node_Expression_Array(array(), $line), Twig_Template::ANY_CALL, $line);
+                return new Twig_Node_Expression_GetAttr($args->getNode(0), $args->getNode(1), count($args) > 2 ? $args->getNode(2) : null, Twig_Template::ANY_CALL, $line);
             default:
                 if (null !== $alias = $this->parser->getImportedSymbol('function', $name)) {
                     $arguments = new Twig_Node_Expression_Array(array(), $line);
@@ -451,8 +466,8 @@ class Twig_ExpressionParser
     /**
      * Parses arguments.
      *
-     * @param Boolean $namedArguments Whether to allow named arguments or not
-     * @param Boolean $definition     Whether we are parsing arguments for a function definition
+     * @param bool $namedArguments Whether to allow named arguments or not
+     * @param bool $definition     Whether we are parsing arguments for a function definition
      */
     public function parseArguments($namedArguments = false, $definition = false)
     {
@@ -583,7 +598,9 @@ class Twig_ExpressionParser
     // checks that the node only contains "constant" elements
     protected function checkConstantExpression(Twig_NodeInterface $node)
     {
-        if (!($node instanceof Twig_Node_Expression_Constant || $node instanceof Twig_Node_Expression_Array)) {
+        if (!($node instanceof Twig_Node_Expression_Constant || $node instanceof Twig_Node_Expression_Array
+            || $node instanceof Twig_Node_Expression_Unary_Neg || $node instanceof Twig_Node_Expression_Unary_Pos
+        )) {
             return false;
         }
 
