@@ -5,7 +5,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 3.0
+ * @version 3.1
  */
 
 namespace femto;
@@ -236,6 +236,14 @@ function page_from_file($file) {
             $page['content'] = substr($page['content'], $header_block_end);
         }
         $page['no-cache'] = explode(',', $page['no-cache']);
+        $page['title_raw'] = $page['title'];
+        if($page['title'] !== null) {
+            $page['title'] = htmlspecialchars($page['title'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
+        }
+        $page['description_raw'] = $page['description'];
+        if($page['description'] !== null) {
+            $page['description'] = htmlspecialchars($page['description'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
+        }
 
         hook('page_before_parse_content', array(&$page));
         $page['content'] = str_replace('%base_url%', $config['base_url'], $page['content']);

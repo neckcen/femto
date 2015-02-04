@@ -90,8 +90,10 @@ _default_)
 * `{{ theme_url }}` - The URL to the theme directory
 * `{{ site_title }}` - Your site's title (defined in `index.php`)
 * `{{ current_page }}` - Contains the values from the current page
-    * `{{ current_page.title }}`
-    * `{{ current_page.description }}`
+    * `{{ current_page.title }}` - HTML escaped
+    * `{{ current_page.title_raw }}`
+    * `{{ current_page.description }}` - HTML escaped
+    * `{{ current_page.description_raw }}`
     * `{{ current_page.robots }}`
     * `{{ current_page.content }}`
 
