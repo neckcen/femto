@@ -18,14 +18,14 @@ header h2 {
     font-size:10px;
     letter-spacing:2px;
 }
-header hgroup, header nav.nav-g, section, footer {
+header hgroup, header nav.navbar, section, footer {
     margin:0 auto;
     max-width:600px;
 }
 header {
     padding:.4em .1em;
 }
-header nav.nav-g {
+header nav.navbar {
     padding:.7em 0 0;
 }
 section {

@@ -19,7 +19,7 @@
     		<h1>{{ site_title }}</h1>
             <h2>minimalist &amp; efficient</h2>
         </hgroup></a>
-		<nav class="nav-g"><ul>
+		<nav class="navbar"><ul>
             {% for page in directory('/') %}
             {% if page.url != '/404' %}
             <li><a href="{{base_url}}{{ page.url }}">{{ page.title }}</a></li>
