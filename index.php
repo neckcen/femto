@@ -1,4 +1,4 @@
-<?php $config = array();
+<?php $config = [];
 
 /**
  * Femto is a simple content manager, designed to be fast and easily
@@ -9,7 +9,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 0.2
+ * @version 4.0
  */
 
 
@@ -36,8 +36,8 @@
 // Directory in which themes are found. Default themes/.
 #$config['theme_dir'] = 'themes/';
 
-// Whether debug mode is enabled for twig. Default: false.
-#$config['twig_debug'] = false;
+// Whether debug mode is enabled. Default: false.
+#$config['debug'] = false;
 
 // A comma separated list of enabled plugins. E.g. gallery,php. Default: empty.
 #$config['plugin_enabled'] = '';

@@ -55,9 +55,6 @@ attributes of the page. For example:
     Robots: noindex,nofollow
     */
 
-These values will be contained in the `{{ current_page }}` variable in themes
-(see below).
-
 There are also certain variables that you can use in your text files:
 
 * <code>&#37;base_url&#37;</code> - The URL to your Femto site

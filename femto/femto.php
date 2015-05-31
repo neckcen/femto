@@ -5,7 +5,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 3.1
+ * @version 4.0
  */
 
 namespace femto;
@@ -18,8 +18,8 @@ require __DIR__.'/vendor/twig/twig/lib/Twig/Autoloader.php';
  * should be available everywhere in Femto.
  */
 class local {
-    public static $config = array();
-    public static $plugin = array();
+    public static $config = [];
+    public static $plugin = [];
     public static $current_page = null;
 
     // prevents instances
@@ -33,14 +33,14 @@ class local {
  *
  * @param array $site_config Optional configuration for this website.
  */
-function run($site_config=array()) {
+function run($site_config=[]) {
     $config =& local::$config;
     $plugin =& local::$plugin;
     $current_page =& local::$current_page;
-    $template_dir = array();
+    $template_dir = [];
 
     // config
-    $config = array(
+    $config = [
         'site_title' => 'Femto',
         'base_url' => null,
         'content_dir' => 'content/',
@@ -48,10 +48,10 @@ function run($site_config=array()) {
         'cache_dir' => 'cache/',
         'theme' => 'default',
         'theme_dir' => 'themes/',
-        'twig_debug' => false,
+        'debug' => false,
         'plugin_enabled' => '',
         'plugin_dir' => __DIR__.'/plugins/',
-    );
+    ];
     $config = array_merge($config, $site_config);
     if($config['base_url'] === null && isset($_SERVER['PHP_SELF'])) {
         $config['base_url'] = dirname($_SERVER['PHP_SELF']);
@@ -64,7 +64,7 @@ function run($site_config=array()) {
 
     // load plugins
     if(empty($config['plugin_enabled'])) {
-        $config['plugin_enabled'] = array();
+        $config['plugin_enabled'] = [];
     } else {
         $config['plugin_enabled'] = explode(',', $config['plugin_enabled']);
         foreach($config['plugin_enabled'] as $P) {
@@ -88,7 +88,7 @@ function run($site_config=array()) {
         }
     }
     $normal_url = $url;
-    $normal_url = str_replace(array('./', '../'), '', $url);
+    $normal_url = str_replace(['./', '../'], '', $url);
     if(substr($url, -6) == '/index') {
         $normal_url = substr($url, 0, -5);
     }
@@ -103,84 +103,72 @@ function run($site_config=array()) {
             $url = '/';
         }
     }
-    hook('request_url', array(&$url));
+    hook('request_url', [&$url]);
 
     // plugin url
-    $match = array();
+    $match = [];
     if(preg_match('`^/plugin/([^/]+)/(.*)$`', $url, $match)) {
         list(,$p, $url) = $match;
-        if(isset($plugin[$p]) && is_callable(array($plugin[$p], 'url'))) {
-            $current_page = call_user_func(array($plugin[$p], 'url'), $url);
+        if(isset($plugin[$p]) && is_callable([$plugin[$p], 'url'])) {
+            $current_page = call_user_func([$plugin[$p], 'url'], $url);
             $template_dir[] = $config['plugin_dir'].$p;
         }
     // normal page
     } else {
         $current_page = page($url);
     }
+    // not found, try plugin hook
+    if($current_page == null) {
+        hook('request_not_found', [&$url, &$current_page]);
+    }
     // not found
     if($current_page == null) {
         header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
         $current_page = page('/404');
-        hook('request_not_found', array(&$current_page));
     }
-    hook('request_complete', array(&$current_page));
+    hook('request_complete', [&$current_page]);
 
     // render
+    if(in_array('no-theme', $current_page['flags'])) {
+        hook('render_after', [&$current_page['content']]);
+        echo $current_page['content'];
+        exit();
+    }
+
     \Twig_Autoloader::register();
     array_unshift($template_dir, $config['theme_dir'].$config['theme']);
     $loader = new \Twig_Loader_Filesystem($template_dir);
-    $cache = false;
-    if($config['cache_enabled'] && !in_array('template', $current_page['no-cache'])) {
-        $cache = $config['cache_dir'].'twig';
-    }
-    $settings = array(
+    $cache = $config['cache_enabled'] ? $config['cache_dir'].'twig' : false;
+    $settings = [
         'cache' => $cache,
-        'debug' => $config['twig_debug'],
+        'debug' => $config['debug'],
         'autoescape' => false,
-    );
+    ];
     $twig = new \Twig_Environment($loader, $settings);
-    if(isset($_GET['purge'])) {
+    if($config['debug'] && isset($_GET['purge'])) {
         $twig->clearCacheFiles();
     }
     $twig->addFunction(new \Twig_SimpleFunction('directory', __NAMESPACE__.'\directory'));
     $twig->addFunction(new \Twig_SimpleFunction('page', __NAMESPACE__ .'\page'));
-    if($config['twig_debug']) {
+    if($config['debug']) {
         $twig->addExtension(new \Twig_Extension_Debug());
     }
-    $twig_vars = array(
+    $twig_vars = [
         'config' => $config,
         'base_url' => $config['base_url'],
         'theme_url' => $config['base_url'].'/'.$config['theme_dir'].$config['theme'],
         'site_title' => $config['site_title'],
         'current_page' => $current_page,
-    );
-    hook('before_render', array(&$twig_vars, &$twig, &$current_page['template']));
+    ];
+    hook('render_before', [&$twig_vars, &$twig, &$current_page['template']]);
     $output = $twig->render($current_page['template'] .'.html', $twig_vars);
-    hook('after_render', array(&$output));
+    hook('render_after', [&$output]);
     echo $output;
 }
 
 
 /**
- * Translate an url to its corresponding file and pass it to page_from_file. If
- * the url doesn't start with a slash it will be considered relative to the
- * current page.
- *
- * @see page_from_file()
- *
- * @param string $url The url to resolve.
- * @return array Femto page, null if not found.
- */
-function page($url) {
-    $file = substr($url, -1) == '/' ? $url.'index.md' : $url.'.md';
-    $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
-      dirname(local::$current_page['file']).'/'.$file;
-    return page_from_file($file);
-}
-
-
-/**
- * Transform a file in a Femto page.
+ * Translate an url to its corresponding file and creates the corresponding page.
  *
  * The Femto page returned is a php array with the following keys:
  * file - the file containing the page
@@ -189,53 +177,94 @@ function page($url) {
  * description - the page description (if set in header)
  * robots - robot meta tag value (if set in header)
  * template - index by default
- * cache - page,directory,template by default
+ * flags - empty by default, supported flags are no-cache,no-theme,no-markdown
+ * more can be added by plugins
  * content - the content of the page
  * Additional keys can be created by plugins.
  *
- * @param string $file The file to read.
+ * @param string $url The url to resolve.
  * @return array Femto page, null if not found.
  */
-function page_from_file($file) {
-    $cache = Cache::factory($file);
+function page($url) {
+    $file = substr($url, -1) == '/' ? $url.'index.md' : $url.'.md';
+    $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
+      dirname(local::$current_page['file']).'/'.$file;
+
+    $cache = Cache::file($file, 'page');
     if(!$cache) {
         return null;
     }
     if(($page = $cache->retrieve()) == null) {
-        $config =& local::$config;
-        $page = array();
+        $page = page_header($file);
+        if($page == null) {
+            return null;
+        }
+        $page['content'] = trim(substr(
+            file_get_contents($page['file']), $page['header_end']));
+        hook('page_parse_content_before', [&$page]);
+        $page['content'] = str_replace('%base_url%', local::$config['base_url'], $page['content']);
+        $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
+        if(!in_array('no-markdown', $page['flags'])) {
+            $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
+        }
+        hook('page_parse_content_after', [&$page]);
+
+        if(!in_array('no-cache', $page['flags'])) {
+            $cache->store($page);
+        }
+    }
+    return $page;
+}
+
+
+/**
+ * Read the header, if any, of a Femto page.
+ *
+ * @see page()
+ *
+ * @param string $file The file to read.
+ * @return array Femto page without content, null if not found.
+ */
+function page_header($file) {
+    $cache = Cache::file($file, 'header');
+    if(!$cache) {
+        return null;
+    }
+    if(($page = $cache->retrieve()) == null) {
+        $page = [];
         $page['file'] = $file;
-        $page['url'] = substr($file, strlen($config['content_dir'])-1);
+        $page['url'] = substr($file, strlen(local::$config['content_dir'])-1);
         if(substr($page['url'], -9) == '/index.md') {
             $page['url'] = substr($page['url'], 0, -8);
         } else {
             $page['url'] = substr($page['url'], 0, -3);
         }
 
-        $page['content'] = file_get_contents($file);
+        $content = file_get_contents($file);
 
-        $header = array(
+        $header = [
             'title' => null,
             'description' => null,
             'robots' => null,
             'template' => 'index',
-            'no-cache' => '',
-        );
-        hook('page_before_read_header', array(&$header));
+            'flags' => '',
+        ];
+        hook('page_parse_header_before', [&$header]);
+        $page['header_end'] = 0;
         $page = array_merge($page, $header);
-        if(substr($page['content'], 0, 2) == '/*') {
-            $header_block_end = strpos($page['content'], '*/')+2;
-            $header_block = substr($page['content'], 0, $header_block_end);
+        if(substr($content, 0, 2) == '/*') {
+            $page['header_end'] = strpos($content, '*/')+2;
+            $header_block = substr($content, 0, $page['header_end']);
             foreach ($header as $key => $default) {
-                $match = array();
+                $match = [];
                 $re = '`\*?\s*'.preg_quote($key, '`').'\s*:([^\r\n]*)`i';
                 if(preg_match($re, $header_block, $match)) {
                     $page[$key] = trim($match[1]);
                 }
             }
-            $page['content'] = substr($page['content'], $header_block_end);
         }
-        $page['no-cache'] = explode(',', $page['no-cache']);
+        $page['flags'] = explode(',', strtolower(str_replace(' ', '',
+          $page['flags'])));
         $page['title_raw'] = $page['title'];
         if($page['title'] !== null) {
             $page['title'] = htmlspecialchars($page['title'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
@@ -245,15 +274,9 @@ function page_from_file($file) {
             $page['description'] = htmlspecialchars($page['description'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
         }
 
-        hook('page_before_parse_content', array(&$page));
-        $page['content'] = str_replace('%base_url%', $config['base_url'], $page['content']);
-        $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
-        $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
-        hook('page_complete', array(&$page));
+        hook('page_parse_header_after', [&$page]);
 
-        if(!in_array('page', $page['no-cache'])) {
-            $cache->store($page);
-        }
+        $cache->store($page);
     }
     return $page;
 }
@@ -273,13 +296,12 @@ function directory($url, $sort='alpha', $order='asc') {
     $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
       dirname($current_page['file']).'/'.$file;
 
-    $cache = Cache::factory($file.'.');
+    $cache = Cache::file($file.'.');
     if(!$cache) {
-        return array();
+        return [];
     }
     if(($dir = $cache->retrieve()) == null) {
-        $dir = array();
-        $cache_allowed = true;
+        $dir = [];
         foreach(scandir($file) as $f) {
             if($f == '.' || $f == '..') {
                 continue;
@@ -288,26 +310,20 @@ function directory($url, $sort='alpha', $order='asc') {
                 $f .= '/index.md';
             }
             if(substr($f, -3) == '.md') {
-                $page = page_from_file($file.$f);
+                $page = page_header($file.$f);
                 if($page !== null) {
-                    unset($page['content']);
-                    if(in_array('directory', $page['no-cache'])) {
-                        $cache_allowed = false;
-                    }
                     $dir[] = $page;
                 }
             }
         }
-        hook('directory_complete', array(&$dir));
-        if($cache_allowed) {
-            $cache->store($dir);
-        }
+        hook('directory_complete', [&$dir]);
+        $cache->store($dir);
     }
     //sorting
     if($sort == 'alpha') {
         usort($dir, __NAMESPACE__.'\\directory_sort_alpha');
     }
-    hook('directory_sort', array(&$dir, &$sort));
+    hook('directory_sort', [&$dir, &$sort]);
     if($order != 'asc') {
         $dir = array_reverse($dir);
     }
@@ -334,52 +350,42 @@ function directory_sort_alpha($a, $b) {
  * @param string $hook Hook name.
  * @param array $args Arguments for the hook.
  */
-function hook($hook, $args=array()) {;
+function hook($hook, $args=[]) {;
     foreach(local::$plugin as $p){
-        if(is_callable(array($p, $hook))){
-            call_user_func_array(array($p, $hook), $args);
+        if(is_callable([$p, $hook])){
+            call_user_func_array([$p, $hook], $args);
         }
     }
 }
 
 
 /**
- * Simple cache system storing information related to one file.
+ * Simple cache system storing information related to one key.
  *
  */
 class Cache {
-    protected $file;
     protected $modified;
     protected $cache_file = null;
 
     /**
-     * Construct a cache object associated with file.
+     * Construct a cache object associated with a key.
      *
-     * @param string $file File associated to this cache instance.
-     * @param int $modified Time when this file was last modified.
+     * @param string $key Key associated to this cache instance.
+     * @param int $modified Time when this key was last modified.
      */
-    protected function __construct($file, $modified) {
-        $this->file = $file;
+    public function __construct($key, $modified) {
         $this->modified = $modified;
-    }
-
-    /**
-     * Compute the cache file when needed.
-     *
-     * @return string Cache file corresponding to the original file.
-     */
-    protected function file() {
-        if($this->cache_file === null) {
-            $hash = md5($this->file);
-            $this->cache_file = sprintf(
-              '%sfemto/%s/%s/%s.php',
-              local::$config['cache_dir'],
-              substr($hash, 0, 2),
-              substr($hash, 2, 2),
-              $hash
-            );
+        if(!local::$config['cache_enabled']) {
+            return;
         }
-        return $this->cache_file;
+        $hash = md5($key);
+        $this->cache_file = sprintf(
+          '%sfemto/%s/%s/%s.php',
+          local::$config['cache_dir'],
+          substr($hash, 0, 2),
+          substr($hash, 2, 2),
+          $hash
+        );
     }
 
     /**
@@ -388,12 +394,13 @@ class Cache {
      * @return mixed Cached data, null if expired or not found.
      */
     public function retrieve() {
-        if(!local::$config['cache_enabled']) {
+        if(!local::$config['cache_enabled']
+          || (local::$config['debug'] && isset($_GET['purge']))) {
             return null;
         }
 
-        if(@filemtime($this->file()) > $this->modified && !isset($_GET['purge'])) {
-            include($this->file());
+        if(@filemtime($this->cache_file) > $this->modified) {
+            include $this->cache_file;
             return $value;
         }
         return null;
@@ -408,22 +415,34 @@ class Cache {
         if(!local::$config['cache_enabled']) {
             return;
         }
-        @mkdir(dirname($this->file()), 0777, true);
-        file_put_contents($this->file(),
+        @mkdir(dirname($this->cache_file), 0777, true);
+        file_put_contents($this->cache_file,
           sprintf('<?php $value = %s;', var_export($value, true)));
+    }
+
+    /**
+     * Purge a value from the cache.
+     *
+     */
+    public function purge() {
+        if(!local::$config['cache_enabled']) {
+            return;
+        }
+        @unlink($this->cache_file);
     }
 
     /**
      * Create a cache object for the given file.
      *
      * @param string $file A file to associate with this cache.
+     * @param string $key Extra characters to be added to the file when used as key.
      * @return Cache object or false if the file doesn't exist.
      */
-    public static function factory($file) {
+    public static function file($file, $key=null) {
         $time = @filemtime($file);
         if(!$time) {
             return false;
         }
-        return new self($file, $time);
+        return new self($file.$key, $time);
     }
 }

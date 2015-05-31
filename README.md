@@ -56,10 +56,18 @@ attributes of the page. For example:
     Title: Welcome
     Description: This description will go in the meta description tag
     Robots: noindex,nofollow
+    Flags: no-markdown,no-theme
     */
 
 These values will be contained in the `{{ current_page }}` variable in themes
 (see below).
+
+The `Flags` attribute let you customise how the page behaves. Possible flags are
+(more can be added by plugins):
+
+* `no-markdown` content will not be processed as markdown
+* `no-theme` the page content will not be inserted in your website's theme
+* `no-cache` disable page content cache (see below)
 
 There are also certain variables that you can use in your text files:
 
@@ -127,15 +135,16 @@ by setting `cache_enabled` to false. This is not recommended due to the negative
 impact on performances for your entire website.
 
 Instead you can disable the cache for a specific page by adding the no-cache
-header.
+flag.
 
     /*
     Title: Welcome
-    No-Cache: page,directory,template
+    Flags: no-cache
     */
 
-Finally you can disable the cache for a single request by adding `?purge=1` at
-the end of the url (e.g. `http://example.com/sub/page?purge=1`).
+Finally, if debug mod is enabled in `index.php` you can disable the cache for a 
+single request by adding `?purge=1` at the end of the url (e.g. 
+`http://example.com/sub/page?purge=1`).
 
 Plugins
 -------
