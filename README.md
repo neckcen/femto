@@ -159,6 +159,5 @@ Femto is developed by Sylvain Didelot.
 It is originally a fork of [Pico](http://pico.dev7studios.com/) by Gilbert
 Pellegrom and make use of the following libraries:
 
-* [php-markdown](https://github.com/michelf/php-markdown) by Michel Fortin
-(altered version to fix some bugs).
+* [php-markdown](https://github.com/michelf/php-markdown) by Michel Fortin.
 * [twig](http://twig.sensiolabs.org/) by Fabien Potencier.
