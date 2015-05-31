@@ -130,7 +130,7 @@ function run($site_config=[]) {
 
     // render
     if(in_array('no-theme', $current_page['flags'])) {
-        hook('render_after', [&$current_page['content']]);
+        hook('render_after', [&$current_page['content'], false]);
         echo $current_page['content'];
         exit();
     }
@@ -162,7 +162,7 @@ function run($site_config=[]) {
     ];
     hook('render_before', [&$twig_vars, &$twig, &$current_page['template']]);
     $output = $twig->render($current_page['template'] .'.html', $twig_vars);
-    hook('render_after', [&$output]);
+    hook('render_after', [&$output, true]);
     echo $output;
 }
 
