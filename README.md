@@ -6,7 +6,7 @@ A minimalist and efficient content management system (CMS) in PHP.
 Requirements
 ------------
 
-* PHP 5.3+
+* PHP 5.4+
 * mod_rewrite or equivalent
 
 Installation
