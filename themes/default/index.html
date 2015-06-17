@@ -21,9 +21,7 @@
         </hgroup></a>
 		<nav class="navbar"><ul>
             {% for page in directory('/') %}
-            {% if page.url != '/404' %}
             <li><a href="{{base_url}}{{ page.url }}">{{ page.title }}</a></li>
-            {% endif %}
             {% endfor %}
 		</ul></nav>
 	</header>

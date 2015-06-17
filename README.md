@@ -67,7 +67,8 @@ The `Flags` attribute let you customise how the page behaves. Possible flags are
 
 * `no-markdown` content will not be processed as markdown
 * `no-theme` the page content will not be inserted in your website's theme
-* `no-cache` disable page content cache (see below)
+* `no-directory` the page will not show in directory listings (see theme below)
+* `no-cache` disable page content cache (see cache below)
 
 There are also certain variables that you can use in your text files:
 

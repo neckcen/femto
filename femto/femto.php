@@ -5,7 +5,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 4.0
+ * @version 4.1
  */
 
 namespace femto;
@@ -115,7 +115,7 @@ function run($site_config=[]) {
         }
     // normal page
     } else {
-        $current_page = page($url);
+        page($url, true);
     }
     // not found, try plugin hook
     if($current_page == null) {
@@ -124,7 +124,7 @@ function run($site_config=[]) {
     // not found
     if($current_page == null) {
         header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
-        $current_page = page('/404');
+        page('/404', true);
     }
     hook('request_complete', [&$current_page]);
 
@@ -183,9 +183,13 @@ function run($site_config=[]) {
  * Additional keys can be created by plugins.
  *
  * @param string $url The url to resolve.
+ * @param bool $is_current Whether the page is the current femto page.
  * @return array Femto page, null if not found.
  */
-function page($url) {
+function page($url, $is_current=false) {
+    if($is_current) {
+        $page =& local::$current_page;
+    }
     $file = substr($url, -1) == '/' ? $url.'index.md' : $url.'.md';
     $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
       dirname(local::$current_page['file']).'/'.$file;
@@ -294,7 +298,7 @@ function page_header($file) {
 function directory($url, $sort='alpha', $order='asc') {
     $file = substr($url, -1) == '/' ? $url : dirname($url).'/';
     $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
-      dirname($current_page['file']).'/'.$file;
+      dirname(local::$current_page['file']).'/'.$file;
 
     $cache = Cache::file($file.'.');
     if(!$cache) {
@@ -311,7 +315,7 @@ function directory($url, $sort='alpha', $order='asc') {
             }
             if(substr($f, -3) == '.md') {
                 $page = page_header($file.$f);
-                if($page !== null) {
+                if($page !== null && !in_array('no-directory', $page['flags'])) {
                     $dir[] = $page;
                 }
             }

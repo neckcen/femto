@@ -9,7 +9,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 4.0
+ * @version 4.1
  */
 
 
