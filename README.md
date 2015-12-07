@@ -72,7 +72,9 @@ The `Flags` attribute let you customise how the page behaves. Possible flags are
 
 There are also certain variables that you can use in your text files:
 
-* `%base_url%` - The URL to your Femto site
+* `%base_url%` - The URL to your Femto site (without trailing slash)
+* `%dir_url%` - The URL to the directory containing the page (relative to the 
+base url, without trailing slash)
 * `%self_url%` - The URL to the current page (relative to the base url)
 
 Themes

@@ -207,6 +207,7 @@ function page($url, $is_current=false) {
             file_get_contents($page['file']), $page['header_end']));
         hook('page_parse_content_before', [&$page]);
         $page['content'] = str_replace('%base_url%', local::$config['base_url'], $page['content']);
+        $page['content'] = str_replace('%dir_url%', $page['dir_url'], $page['content']);
         $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
         if(!in_array('no-markdown', $page['flags'])) {
             $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
@@ -238,6 +239,7 @@ function page_header($file) {
         $page = [];
         $page['file'] = $file;
         $page['url'] = substr($file, strlen(local::$config['content_dir'])-1);
+        $page['dir_url'] = dirname($page['url']);
         if(substr($page['url'], -9) == '/index.md') {
             $page['url'] = substr($page['url'], 0, -8);
         } else {
