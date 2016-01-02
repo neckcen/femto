@@ -5,42 +5,27 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 4.1
+ * @version 5.0
  */
 
 namespace femto;
 
 require __DIR__.'/vendor/michelf/php-markdown/Michelf/MarkdownExtra.inc.php';
-require __DIR__.'/vendor/twig/twig/lib/Twig/Autoloader.php';
 
 /**
- * A dumb class to avoid poluting the global namespace with the variables that
- * should be available everywhere in Femto.
- */
-class local {
-    public static $config = [];
-    public static $plugin = [];
-    public static $current_page = null;
-
-    // prevents instances
-    private function __construct() {}
-}
-
-
-/**
- * The core logic of Femto.
- * Load the plugins, route the url and render the corresponding page.
+ * A class which holds all the femto variables to avoid poluting the global
+ * namespace. Cannot be instanciated.
  *
- * @param array $site_config Optional configuration for this website.
  */
-function run($site_config=[]) {
-    $config =& local::$config;
-    $plugin =& local::$plugin;
-    $current_page =& local::$current_page;
-    $template_dir = [];
-
-    // config
-    $config = [
+class _ {
+    /**
+     * Configuration.
+     *
+     * @see index.php
+     *
+     * @var array
+     */
+    public static $config = [
         'site_title' => 'Femto',
         'base_url' => null,
         'content_dir' => 'content/',
@@ -52,31 +37,72 @@ function run($site_config=[]) {
         'plugin_enabled' => '',
         'plugin_dir' => __DIR__.'/plugins/',
     ];
-    $config = array_merge($config, $site_config);
-    if($config['base_url'] === null && isset($_SERVER['PHP_SELF'])) {
-        $config['base_url'] = dirname($_SERVER['PHP_SELF']);
+
+    /**
+     * Loaded plugins.
+     *
+     * @var array
+     */
+    public static $plugin = [];
+
+    /**
+     * The page corresponding to the current URL.
+     *
+     * @var array
+     */
+    public static $current_page;
+
+    /**
+     * Prevent instances.
+     *
+     */
+    private function __construct() {}
+}
+
+/**
+ * The core logic of Femto.
+ * Load the plugins, route the url and render the corresponding page.
+ *
+ * @param array $config Configuration for this website.
+ */
+function run($config=[]) {
+    // config
+    _::$config = $config + _::$config;
+    if(_::$config['base_url'] === null && isset($_SERVER['PHP_SELF'])) {
+        _::$config['base_url'] = dirname($_SERVER['PHP_SELF']);
     }
-    $config['base_url'] = rtrim($config['base_url'], '/');
-    $config['content_dir'] = rtrim($config['content_dir'], '/').'/';
-    $config['cache_dir'] = rtrim($config['cache_dir'], '/').'/';
-    $config['theme_dir'] = rtrim($config['theme_dir'], '/').'/';
-    $config['plugin_dir'] = rtrim($config['plugin_dir'], '/').'/';
+    _::$config['base_url'] = rtrim(_::$config['base_url'], '/');
+    _::$config['content_dir'] = rtrim(_::$config['content_dir'], '/').'/';
+    _::$config['cache_dir'] = rtrim(_::$config['cache_dir'], '/').'/';
+    _::$config['theme_dir'] = rtrim(_::$config['theme_dir'], '/').'/';
+    _::$config['plugin_dir'] = rtrim(_::$config['plugin_dir'], '/').'/';
+    _::$config['plugin_enabled'] = empty(_::$config['plugin_enabled']) ? [] :
+        explode(',', _::$config['plugin_enabled']);
+    Cache::$default['enabled'] = _::$config['cache_enabled'];
+    Cache::$default['dir'] = _::$config['cache_dir'];
+    Template::$default['dir'] = _::$config['theme_dir']._::$config['theme'].'/';
+
+    Template::$global = [
+        'config' => _::$config,
+        'base_url' => _::$config['base_url'],
+        'theme_url' => sprintf('%s/%s%s',
+            _::$config['base_url'],
+            _::$config['theme_dir'],
+            _::$config['theme']
+        ),
+        'site_title' => _::$config['site_title'],
+    ];
 
     // load plugins
-    if(empty($config['plugin_enabled'])) {
-        $config['plugin_enabled'] = [];
-    } else {
-        $config['plugin_enabled'] = explode(',', $config['plugin_enabled']);
-        foreach($config['plugin_enabled'] as $P) {
-            $p = strtolower($P);
-            include($config['plugin_dir'].$p.'.php');
-            $P = __NAMESPACE__.'\plugin\\'.$P;
-            $plugin[$p] = new $P($config);
-        }
+    foreach(_::$config['plugin_enabled'] as $Plugin) {
+        $Plugin = trim($Plugin);
+        $plugin = strtolower($Plugin);
+        include sprintf('%s%s.php', _::$config['plugin_dir'], $plugin);
+        $Plugin = sprintf('%s\plugin\%s', __NAMESPACE__, $Plugin);
+        _::$plugin[$plugin] = new $Plugin(_::$config);
     }
 
     // get url and normalise it if needed
-    $url = '';
     if(isset($_SERVER['REDIRECT_URL'])) {
         $url = $_SERVER['REDIRECT_URL'];
     } else {
@@ -87,94 +113,72 @@ function run($site_config=[]) {
             $url = substr($_SERVER['REQUEST_URI'], 0, $qs);
         }
     }
-    $normal_url = $url;
     $normal_url = str_replace(['./', '../'], '', $url);
-    if(substr($url, -6) == '/index') {
-        $normal_url = substr($url, 0, -5);
+    if(substr($normal_url, -6) == '/index') {
+        $normal_url = substr($normal_url, 0, -5);
     }
     if($normal_url != $url) {
-        header('Location: '.$normal_url);
+        header('Location: '.$normal_url, true, 301);
         exit();
     }
-    if($config['base_url'] != '') {
-        if(strpos($url, $config['base_url']) === 0) {
-            $url = substr($url, strlen($config['base_url']));
-        } else {
-            $url = '/';
-        }
+    if(_::$config['base_url'] != '') {
+        $url = strpos($url, _::$config['base_url']) === 0 ?
+          substr($url, strlen(_::$config['base_url'])) : '/';
     }
     hook('request_url', [&$url]);
 
     // plugin url
     $match = [];
     if(preg_match('`^/plugin/([^/]+)/(.*)$`', $url, $match)) {
-        list(,$p, $url) = $match;
-        if(isset($plugin[$p]) && is_callable([$plugin[$p], 'url'])) {
-            $current_page = call_user_func([$plugin[$p], 'url'], $url);
-            $template_dir[] = $config['plugin_dir'].$p;
+        list(,$plugin, $url) = $match;
+        if(isset(_::$plugin[$plugin])
+          && is_callable([_::$plugin[$plugin], 'url'])) {
+            _::$current_page = call_user_func([_::$plugin[$plugin], 'url'], $url);
         }
+
     // normal page
     } else {
-        page($url, true);
+        page($url, True);
     }
-    // not found, try plugin hook
-    if($current_page == null) {
-        hook('request_not_found', [&$url, &$current_page]);
+    // not found, try hook
+    if(_::$current_page == null) {
+        hook('request_not_found', [&$url, &_::$current_page]);
     }
     // not found
-    if($current_page == null) {
+    if(_::$current_page == null) {
         header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
-        page('/404', true);
+        page('/404', True);
     }
-    hook('request_complete', [&$current_page]);
+    hook('request_complete', [&_::$current_page]);
 
     // render
-    if(in_array('no-theme', $current_page['flags'])) {
-        hook('render_after', [&$current_page['content'], false]);
-        echo $current_page['content'];
+    if(in_array('no-theme', _::$current_page['flags'])) {
+        hook('render_after', [&_::$current_page['content'], false]);
+        echo _::$current_page['content'];
         exit();
     }
 
-    \Twig_Autoloader::register();
-    array_unshift($template_dir, $config['theme_dir'].$config['theme']);
-    $loader = new \Twig_Loader_Filesystem($template_dir);
-    $cache = $config['cache_enabled'] ? $config['cache_dir'].'twig' : false;
-    $settings = [
-        'cache' => $cache,
-        'debug' => $config['debug'],
-        'autoescape' => false,
+    $variable = [
+        'page' => _::$current_page,
     ];
-    $twig = new \Twig_Environment($loader, $settings);
-    if($config['debug'] && isset($_GET['purge'])) {
-        $twig->clearCacheFiles();
-    }
-    $twig->addFunction(new \Twig_SimpleFunction('directory', __NAMESPACE__.'\directory'));
-    $twig->addFunction(new \Twig_SimpleFunction('page', __NAMESPACE__ .'\page'));
-    if($config['debug']) {
-        $twig->addExtension(new \Twig_Extension_Debug());
-    }
-    $twig_vars = [
-        'config' => $config,
-        'base_url' => $config['base_url'],
-        'theme_url' => $config['base_url'].'/'.$config['theme_dir'].$config['theme'],
-        'site_title' => $config['site_title'],
-        'current_page' => $current_page,
-    ];
-    hook('render_before', [&$twig_vars, &$twig, &$current_page['template']]);
-    $output = $twig->render($current_page['template'] .'.html', $twig_vars);
+    hook('render_before', [&$variable, &_::$current_page['template']]);
+    $template = new Template(_::$current_page['template'] .'.html.php');
+    $template->variable = $variable;
+    $output = (string) $template;
     hook('render_after', [&$output, true]);
     echo $output;
 }
 
-
 /**
- * Translate an url to its corresponding file and creates the corresponding page.
+ * Map an url to its corresponding file and creates the corresponding page.
  *
  * The Femto page returned is a php array with the following keys:
  * file - the file containing the page
  * url - the url corresponding to this page
  * title - the page title (if set in header)
+ * title_raw - unescaped page title
  * description - the page description (if set in header)
+ * description_raw - unescaped description
  * robots - robot meta tag value (if set in header)
  * template - index by default
  * flags - empty by default, supported flags are no-cache,no-theme,no-markdown
@@ -182,31 +186,30 @@ function run($site_config=[]) {
  * content - the content of the page
  * Additional keys can be created by plugins.
  *
- * @param string $url The url to resolve.
- * @param bool $is_current Whether the page is the current femto page.
- * @return array Femto page, null if not found.
+ * @param string $url The url to resolve
+ * @param bool $current Whether the page is the current one
+ * @return array Femto page, null if not found
  */
-function page($url, $is_current=false) {
-    if($is_current) {
-        $page =& local::$current_page;
-    }
+function page($url, $current=False) {
     $file = substr($url, -1) == '/' ? $url.'index.md' : $url.'.md';
-    $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
-      dirname(local::$current_page['file']).'/'.$file;
+    $file = $file[0] == '/' ? _::$config['content_dir'].substr($file, 1) :
+      dirname(_::$current_page['file']).'/'.$file;
 
-    $cache = Cache::file($file, 'page');
-    if(!$cache) {
-        return null;
+    if(!is_file($file)) {
+        return;
     }
+
+    if($current) {
+        $page =& _::$current_page;
+    }
+
+    $cache = new FileCache($file, 'page');
     if(($page = $cache->retrieve()) == null) {
         $page = page_header($file);
-        if($page == null) {
-            return null;
-        }
         $page['content'] = trim(substr(
             file_get_contents($page['file']), $page['header_end']));
         hook('page_parse_content_before', [&$page]);
-        $page['content'] = str_replace('%base_url%', local::$config['base_url'], $page['content']);
+        $page['content'] = str_replace('%base_url%', _::$config['base_url'], $page['content']);
         $page['content'] = str_replace('%dir_url%', $page['dir_url'], $page['content']);
         $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
         if(!in_array('no-markdown', $page['flags'])) {
@@ -221,30 +224,23 @@ function page($url, $is_current=false) {
     return $page;
 }
 
-
 /**
  * Read the header, if any, of a Femto page.
  *
  * @see page()
  *
- * @param string $file The file to read.
- * @return array Femto page without content, null if not found.
+ * @param string $file The file to read
+ * @return array Femto page without content, null if not found
  */
 function page_header($file) {
-    $cache = Cache::file($file, 'header');
-    if(!$cache) {
-        return null;
-    }
+    $cache = new FileCache($file, 'header');
     if(($page = $cache->retrieve()) == null) {
         $page = [];
         $page['file'] = $file;
-        $page['url'] = substr($file, strlen(local::$config['content_dir'])-1);
+        $page['url'] = substr($file, strlen(_::$config['content_dir'])-1);
         $page['dir_url'] = dirname($page['url']);
-        if(substr($page['url'], -9) == '/index.md') {
-            $page['url'] = substr($page['url'], 0, -8);
-        } else {
-            $page['url'] = substr($page['url'], 0, -3);
-        }
+        $page['url'] = substr($page['url'], -9) == '/index.md' ?
+          substr($page['url'], 0, -8) : substr($page['url'], 0, -3);
 
         $content = file_get_contents($file);
 
@@ -253,7 +249,7 @@ function page_header($file) {
             'description' => null,
             'robots' => null,
             'template' => 'index',
-            'flags' => '',
+            'flags' => null,
         ];
         hook('page_parse_header_before', [&$header]);
         $page['header_end'] = 0;
@@ -269,8 +265,10 @@ function page_header($file) {
                 }
             }
         }
-        $page['flags'] = explode(',', strtolower(str_replace(' ', '',
-          $page['flags'])));
+
+        $page['flags'] = strtolower(str_replace(' ', '',$page['flags']));
+        $page['flags'] = empty($page['flags']) ? [] : explode(',', $page['flags']);
+
         $page['title_raw'] = $page['title'];
         if($page['title'] !== null) {
             $page['title'] = htmlspecialchars($page['title'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
@@ -278,6 +276,10 @@ function page_header($file) {
         $page['description_raw'] = $page['description'];
         if($page['description'] !== null) {
             $page['description'] = htmlspecialchars($page['description'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
+        }
+        $page['robots_raw'] = $page['robots'];
+        if($page['robots'] !== null) {
+            $page['robots'] = htmlspecialchars($page['robots'], ENT_COMPAT|ENT_HTML5, 'UTF-8');
         }
 
         hook('page_parse_header_after', [&$page]);
@@ -287,25 +289,25 @@ function page_header($file) {
     return $page;
 }
 
-
 /**
  * List the content of the directory corresponding to the url. If a directory
  * is found its index.md page will be used.
  *
- * @param string $url The url to list.
- * @param string $sort Sorting criteria.
- * @param string $order Sorting order.
- * @return array List of Femto pages with content removed.
+ * @param string $url The url to list
+ * @param string $sort Sorting criteria
+ * @param string $order Sorting order
+ * @return array List of Femto pages with content removed
  */
 function directory($url, $sort='alpha', $order='asc') {
     $file = substr($url, -1) == '/' ? $url : dirname($url).'/';
-    $file = $file[0] == '/' ? local::$config['content_dir'].substr($file, 1) :
-      dirname(local::$current_page['file']).'/'.$file;
+    $file = $file[0] == '/' ? _::$config['content_dir'].substr($file, 1) :
+      dirname(_::$current_page['file']).'/'.$file;
 
-    $cache = Cache::file($file.'.');
-    if(!$cache) {
-        return [];
+    if(!is_dir($file)) {
+        return;
     }
+
+    $cache = new FileCache($file);
     if(($dir = $cache->retrieve()) == null) {
         $dir = [];
         foreach(scandir($file) as $f) {
@@ -327,13 +329,27 @@ function directory($url, $sort='alpha', $order='asc') {
     }
     //sorting
     if($sort == 'alpha') {
-        usort($dir, __NAMESPACE__.'\\directory_sort_alpha');
+        usort($dir, __NAMESPACE__.'\directory_sort_alpha');
     }
     hook('directory_sort', [&$dir, &$sort]);
     if($order != 'asc') {
         $dir = array_reverse($dir);
     }
     return $dir;
+}
+
+/**
+ * Run a hook on all loaded plugins.
+ *
+ * @param string $hook Hook name.
+ * @param array $args Arguments for the hook.
+ */
+function hook($hook, $args=[]) {;
+    foreach(_::$plugin as $p){
+        if(is_callable([$p, $hook])){
+            call_user_func_array([$p, $hook], $args);
+        }
+    }
 }
 
 /**
@@ -349,106 +365,306 @@ function directory_sort_alpha($a, $b) {
     return strcmp($a['title'], $b['title']);
 }
 
-
 /**
- * Run a hook on all loaded plugins.
+ * Simple cache system.
  *
- * @param string $hook Hook name.
- * @param array $args Arguments for the hook.
- */
-function hook($hook, $args=[]) {;
-    foreach(local::$plugin as $p){
-        if(is_callable([$p, $hook])){
-            call_user_func_array([$p, $hook], $args);
-        }
-    }
-}
-
-
-/**
- * Simple cache system storing information related to one key.
+ * Usage:
+ *
+ * // create a cache object associated with "key"
+ * $cache = new Cache('key');
+ *
+ * // check if the cache exists and is less than an hour old
+ * if(($data = $cache->retrieve(time()-3600)) === null) {
+ *     // cache didn't exist, populate $data and store it
+ *     $data = 'foo';
+ *     $cache->store($data);
+ * }
+ *
+ * // empty the cache
+ * $cache->purge();
  *
  */
 class Cache {
-    protected $modified;
-    protected $cache_file = null;
+    /**
+     * Default configuration.
+     * - enabled: whether the cache system is enabled or not
+     * - dir: directory in which cached data are located
+     * - raw: whether data is stored raw or as php variables
+     *
+     * @var array
+     */
+    static public $default = [
+        'enabled' => True,
+        'dir' => 'cache/',
+        'raw' => False,
+    ];
 
     /**
-     * Construct a cache object associated with a key.
+     * Configuration of a specific cache instance.
      *
-     * @param string $key Key associated to this cache instance.
-     * @param int $modified Time when this key was last modified.
+     * @var array
      */
-    public function __construct($key, $modified) {
-        $this->modified = $modified;
-        if(!local::$config['cache_enabled']) {
-            return;
-        }
+    public $config;
+
+    /**
+     * File which contains the cached data.
+     *
+     * @var string
+     */
+    protected $cache_file;
+
+    /**
+     * Create a cache object associated with key.
+     *
+     * @param string $key Key associated to this cache instance
+     * @param array $config Configuration
+     */
+    public function __construct($key, $config=[]) {
+        $this->config = $config + self::$default;
         $hash = md5($key);
+        $ext = $this->config['raw'] ? 'bin' : 'php';
         $this->cache_file = sprintf(
-          '%sfemto/%s/%s/%s.php',
-          local::$config['cache_dir'],
+          '%s%s/%s/%s.%s',
+          $this->config['dir'],
           substr($hash, 0, 2),
           substr($hash, 2, 2),
-          $hash
+          $hash,
+          $ext
         );
     }
 
     /**
-     * Check if there is data in cache.
+     * Return data in the cache if any.
      *
-     * @return mixed Cached data, null if expired or not found.
+     * @param int $modified Timestamp, when the original data was last modified
+     * @return mixed Cached data, null if expired or not found
      */
-    public function retrieve() {
-        if(!local::$config['cache_enabled']
-          || (local::$config['debug'] && isset($_GET['purge']))) {
-            return null;
+    public function retrieve($modified) {
+        if($this->config['enabled']
+          && @filemtime($this->cache_file) > $modified) {
+            if($this->config['raw']) {
+                return file_get_contents($this->cache_file);
+            } else {
+                include $this->cache_file;
+                return $value;
+            }
         }
-
-        if(@filemtime($this->cache_file) > $this->modified) {
-            include $this->cache_file;
-            return $value;
-        }
-        return null;
     }
 
     /**
-     * Store a value in the cache.
+     * Store data in the cache.
      *
-     * @param mixed $value Value to cache.
+     * @param mixed $value Data to cache
      */
     public function store($value) {
-        if(!local::$config['cache_enabled']) {
-            return;
-        }
         @mkdir(dirname($this->cache_file), 0777, true);
-        file_put_contents($this->cache_file,
-          sprintf('<?php $value = %s;', var_export($value, true)));
+        if($this->config['raw']) {
+            file_put_contents($this->cache_file, $value);
+        } else {
+            file_put_contents($this->cache_file, sprintf(
+              '<?php $value = %s;', var_export($value, true)
+            ));
+        }
     }
 
     /**
-     * Purge a value from the cache.
+     * Purge data from the cache.
      *
      */
     public function purge() {
-        if(!local::$config['cache_enabled']) {
-            return;
-        }
         @unlink($this->cache_file);
+    }
+}
+
+/**
+ * Cache objet associated to a specific file. Modified time become the file's.
+ *
+ * // create a cache object associated with "key"
+ * $cache = new Cache('path/to/file', 'key');
+ *
+ * // check if the cache exists and is less than an hour old
+ * if(($data = $cache->retrieve()) === null) {
+ *     // cache didn't exist, populate $data and store it
+ *     $data = 'foo';
+ *     $cache->store($data);
+ * }
+ *
+ * // empty the cache
+ * $cache->purge();
+ *
+ */
+class FileCache extends Cache {
+    /**
+     * File associated to this cache object.
+     *
+     * @var string
+     */
+    protected $file;
+
+    /**
+     * Create a cache object associated with file (and optional key).
+     *
+     * @param string $file File associated to this cache instance
+     * @param string $key Key associated to this cache instance
+     * @param array $config Configuration
+     */
+    public function __construct($file, $key='', $config=[]) {
+        $this->file = $file;
+        parent::__construct($file.$key, $config);
     }
 
     /**
-     * Create a cache object for the given file.
+     * Return data in the cache if any.
      *
-     * @param string $file A file to associate with this cache.
-     * @param string $key Extra characters to be added to the file when used as key.
-     * @return Cache object or false if the file doesn't exist.
+     * @param int $modified Timestamp, when the original data was last modified
+     * @return mixed Cached data, null if expired or not found
      */
-    public static function file($file, $key=null) {
-        $time = @filemtime($file);
-        if(!$time) {
-            return false;
+    public function retrieve($modified=null) {
+        if($modified == null) {
+            $modified = filemtime($this->file);
         }
-        return new self($file.$key, $time);
+        return parent::retrieve($modified);
+    }
+}
+
+/**
+ * Simple template system, basically a tiny wrapper for pure php templates.
+ *
+ * Usage:
+ *
+ * // create a template object using "file.html"
+ * $tpl = new Template('file.html');
+ *
+ * // assign a value to "key"
+ * $tpl['key'] = 'value';
+ *
+ * // display the template
+ * $tpl();
+ *
+ * // alternatively return the template as string
+ * $html = (string) $tpl;
+ *
+ */
+class Template implements \ArrayAccess {
+    /**
+     * Default configuration.
+     * - dir: directory in which templates are located
+     *
+     * @var array
+     */
+    public static $default = [
+        'dir' => 'themes/default/',
+    ];
+
+    /**
+     * Configuration of a specific template instance.
+     *
+     * @var array
+     */
+    public $config;
+
+    /**
+     * Variables available in all templates.
+     *
+     * @var array
+     */
+    public static $global = [];
+
+    /**
+     * Variables available in the template.
+     *
+     * @var array
+     */
+    public $variable = [];
+
+    /**
+     * Template file.
+     *
+     * @var string
+     */
+    protected $template;
+
+    /**
+     * Create a template instance for $template.
+     *
+     * @param string $template Name of the template file, including extension
+     * @param array $config Configuration
+     */
+    public function __construct($template, $config=[]) {
+        $this->config = $config + self::$default;
+        $this->template = sprintf(
+          '%s%s',
+          $this->config['dir'],
+          str_replace(['./', '../'], ['', ''], $template)
+        );
+    }
+
+    /**
+     * @see ArrayAccess::offsetSet
+     */
+    public function offsetSet($offset, $value) {
+        if (is_null($offset)) {
+            $this->variable[] = $value;
+        } else {
+            $this->variable[$offset] = $value;
+        }
+    }
+
+    /**
+     * @see ArrayAccess::offsetExists
+     */
+    public function offsetExists($offset) {
+        return isset($this->variable[$offset]);
+    }
+
+    /**
+     * @see ArrayAccess::offsetUnset
+     */
+    public function offsetUnset($offset) {
+        unset($this->variable[$offset]);
+    }
+
+    /**
+     * @see ArrayAccess::offsetGet
+     */
+    public function offsetGet($offset) {
+        return isset($this->variable[$offset]) ? $this->variable[$offset] : null;
+    }
+
+    /**
+     * Include the template in a clean environment.
+     *
+     */
+    protected function wrap() {
+        extract(self::$global);
+        extract($this->variable);
+        include $this->template;
+    }
+
+    /**
+     * Print the template.
+     *
+     * @param array $variable Variables available in the template
+     * @param bool $reset Whether to reset the variables after render
+     */
+    public function __invoke($variable=null, $reset=true) {
+        if($variable !== null) {
+            $this->variable = $variable + $this->variable;
+        }
+        $this->wrap();
+        if($reset) {
+            $this->variable = [];
+        }
+    }
+
+    /**
+     * Return the template as a string.
+     *
+     * @return string
+     */
+    public function __toString() {
+        ob_start();
+        $this->wrap();
+        return ob_get_clean();
     }
 }
