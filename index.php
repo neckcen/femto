@@ -36,8 +36,8 @@
 // Directory in which themes are found. Default themes/.
 #$config['theme_dir'] = 'themes/';
 
-// Whether debug mode is enabled. Default: false.
-#$config['debug'] = false;
+// Base url to the theme directory. Default $config['base_url']
+#$config['theme_base_url'] = '';
 
 // A comma separated list of enabled plugins. E.g. gallery,php. Default: empty.
 #$config['plugin_enabled'] = '';

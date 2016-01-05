@@ -80,9 +80,8 @@ base url, without trailing slash)
 Themes
 ------
 You can create themes for your Femto installation in the "themes" folder. Check
-out the default theme for an example. Femto uses
-[Twig](http://twig.sensiolabs.org/documentation) for it's template engine. You
-can select your theme by setting the `$config['theme']` variable in `index.php`.
+out the default theme for an example. You can select your theme by setting the 
+`$config['theme']` variable in `index.php`.
 
 All themes must include an `index.html` file to define the HTML structure of the
 theme. Pages can specify a different template by setting the `template` header:
@@ -92,49 +91,48 @@ theme. Pages can specify a different template by setting the `template` header:
     Template: mytemplate
     */
 
-Below are the Twig variables that are available to use in your theme:
+Below are the variables that are available to use in your theme:
 
-* `{{ config }}` - Contains the configuration (e.g. `{{config.theme}}` outputs
+* `$config` - Contains the configuration (e.g. `$config['theme']` outputs
 _default_)
-* `{{ base_url }}` - The URL to your Femto site
-* `{{ theme_dir }}` - The path to the theme directory
-* `{{ theme_url }}` - The URL to the theme directory
-* `{{ site_title }}` - Your site's title (defined in `index.php`)
-* `{{ current_page }}` - Contains the values from the current page
-    * `{{ current_page.title }}` - HTML escaped
-    * `{{ current_page.title_raw }}`
-    * `{{ current_page.description }}` - HTML escaped
-    * `{{ current_page.description_raw }}`
-    * `{{ current_page.robots }}`
-    * `{{ current_page.content }}`
+* `$base_url` - The URL to your Femto site (no trailing slash)
+* `$theme_url` - The URL to the theme directory
+* `$site_title` - Your site's title (defined in `index.php`)
+* `$page` - Contains the values from the current page
+    * `$page['title']` - HTML escaped
+    * `$page['title_raw']`
+    * `$page['description']` - HTML escaped
+    * `$page['description_raw']`
+    * `$page['robots']` - HTML escaped
+    * `$page['robots_raw']`
+    * `$page['content']`
 
-Additionally two functions are also available:
+You can also access Femto's functions:
 
-* `{{ page(url) }}` - Return the page corresponding to `url` or nothing if
+* `\femto\page($url)` - Return the page corresponding to `$url` or null if
 the page doesn't exist.
-* `{{ directory(url, sort, order) }}` - Return all pages in the directory
-corresponding to `url` sorted by `sort` and ordered by `order`.<br/>
+* `\femto\directory($url, $sort, $order)` - Return all pages in the directory
+corresponding to `$url` sorted by `$sort` and ordered by `$order`.<br/>
 `Sort` defaults to _alpha_, no other value possible by default but
 plugins can add more.<br/>
 `Order` defaults to _desc_, other value possible: _asc_.<br/>
-Pages are returned without their content.
+Pages are returned by this function without their content.
 
 Example use:
 
     <nav><ul>
-        {% for page in directory('/') %}
-        <li><a href="{{ page.url }}">{{ page.title }}</a></li>
-        {% endfor %}
+        <?php foreach(\femto\directory('/') as $p): ?>
+        <li><a href="<?php echo $base_url.'/'.$p['url']; ?>"><?php echo $p['title']; ?></a></li>
+        <?php endfor; ?>
     </ul></nav>
 
 Cache
 -----
 Femto features a powerful cache system, each page is only rendered once unless
-you modify it. There is also a cache in place for directory information and for
-the themes themselves.
+you modify it. There is also a cache in place for directory information.
 
-You can disable the cache in three different way. First globally in `index.php`
-by setting `cache_enabled` to false. This is not recommended due to the negative
+You can disable the cache in two different way. Globally in `index.php` by 
+setting `cache_enabled` to false. This is not recommended due to the negative
 impact on performances for your entire website.
 
 Instead you can disable the cache for a specific page by adding the no-cache
@@ -144,10 +142,6 @@ flag.
     Title: Welcome
     Flags: no-cache
     */
-
-Finally, if debug mod is enabled in `index.php` you can disable the cache for a 
-single request by adding `?purge=1` at the end of the url (e.g. 
-`http://example.com/sub/page?purge=1`).
 
 Plugins
 -------

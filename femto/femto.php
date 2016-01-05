@@ -33,7 +33,7 @@ class _ {
         'cache_dir' => 'cache/',
         'theme' => 'default',
         'theme_dir' => 'themes/',
-        'debug' => false,
+        'theme_base_url' => null,
         'plugin_enabled' => '',
         'plugin_dir' => __DIR__.'/plugins/',
     ];
@@ -75,6 +75,8 @@ function run($config=[]) {
     _::$config['content_dir'] = rtrim(_::$config['content_dir'], '/').'/';
     _::$config['cache_dir'] = rtrim(_::$config['cache_dir'], '/').'/';
     _::$config['theme_dir'] = rtrim(_::$config['theme_dir'], '/').'/';
+    _::$config['theme_base_url'] = _::$config['theme_base_url'] === null ?
+      _::$config['base_url'] : rtrim(_::$config['theme_base_url'], '/');
     _::$config['plugin_dir'] = rtrim(_::$config['plugin_dir'], '/').'/';
     _::$config['plugin_enabled'] = empty(_::$config['plugin_enabled']) ? [] :
         explode(',', _::$config['plugin_enabled']);
@@ -86,7 +88,7 @@ function run($config=[]) {
         'config' => _::$config,
         'base_url' => _::$config['base_url'],
         'theme_url' => sprintf('%s/%s%s',
-            _::$config['base_url'],
+            _::$config['theme_base_url'],
             _::$config['theme_dir'],
             _::$config['theme']
         ),
