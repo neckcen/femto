@@ -3,10 +3,10 @@
 <head>
 	<meta charset="utf-8">
 
-	<title><?php if($page['title']) echo $page['title'].' - '; ?><?php echo $site_title; ?></title>
+	<title><?php if($page['title']) echo $page['title'].' - '; echo $site_title; ?></title>
 <?php if($page['description']): ?>
 	<meta name="description" content="<?php echo $page['description']; ?>">
-<?php endif; ?><?php if($page['robots']): ?>
+<?php endif; if($page['robots']): ?>
 	<meta name="robots" content="<?php echo $page['robots']; ?>">
 <?php endif; ?>
 
