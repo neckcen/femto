@@ -10,8 +10,6 @@
 
 namespace femto;
 
-require __DIR__.'/vendor/michelf/php-markdown/Michelf/MarkdownExtra.inc.php';
-
 /**
  * A class which holds all the femto variables to avoid poluting the global
  * namespace. Cannot be instanciated.
@@ -215,6 +213,7 @@ function page($url, $current=False) {
         $page['content'] = str_replace('%dir_url%', $page['dir_url'], $page['content']);
         $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
         if(!in_array('no-markdown', $page['flags'])) {
+            require __DIR__.'/vendor/michelf/php-markdown/Michelf/MarkdownExtra.inc.php';
             $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
         }
         hook('page_parse_content_after', [&$page]);
