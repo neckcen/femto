@@ -206,18 +206,7 @@ function page($url, $current=False) {
     $cache = new FileCache($file, 'page');
     if(($page = $cache->retrieve()) == null) {
         $page = page_header($file);
-        $page['content'] = trim(substr(
-            file_get_contents($page['file']), $page['header_end']));
-        hook('page_parse_content_before', [&$page]);
-        $page['content'] = str_replace('%base_url%', _::$config['base_url'], $page['content']);
-        $page['content'] = str_replace('%dir_url%', $page['dir_url'], $page['content']);
-        $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
-        if(!in_array('no-markdown', $page['flags'])) {
-            require __DIR__.'/vendor/michelf/php-markdown/Michelf/MarkdownExtra.inc.php';
-            $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
-        }
-        hook('page_parse_content_after', [&$page]);
-
+        page_content($page);
         if(!in_array('no-cache', $page['flags'])) {
             $cache->store($page);
         }
@@ -226,7 +215,7 @@ function page($url, $current=False) {
 }
 
 /**
- * Read the header, if any, of a Femto page.
+ * Read and separate the header, if any, of a Femto page.
  *
  * @see page()
  *
@@ -253,11 +242,11 @@ function page_header($file) {
             'flags' => null,
         ];
         hook('page_parse_header_before', [&$header]);
-        $page['header_end'] = 0;
+        $header_end = 0;
         $page = array_merge($page, $header);
         if(substr($content, 0, 2) == '/*') {
-            $page['header_end'] = strpos($content, '*/')+2;
-            $header_block = substr($content, 0, $page['header_end']);
+            $header_end = strpos($content, '*/')+2;
+            $header_block = substr($content, 0, $header_end);
             foreach ($header as $key => $default) {
                 $match = [];
                 $re = '`\*?\s*'.preg_quote($key, '`').'\s*:([^\r\n]*)`i';
@@ -285,9 +274,32 @@ function page_header($file) {
 
         hook('page_parse_header_after', [&$page]);
 
+        $page['content'] = trim(substr(file_get_contents($page['file']), $header_end));
+
         $cache->store($page);
     }
     return $page;
+}
+
+/**
+ * Process the content of a page. Plugins can call this function to force
+ * processing of the content. Be mindful of infinite loops if hooks are called.
+ *
+ * @param array $page A Femto page.
+ * @param bool $hook Whether hooks should be called.
+ */
+function page_content(&$page, $hook=True) {
+    if($hook) hook('page_parse_content_before', [&$page]);
+    if(!empty($page['content'])) {
+        $page['content'] = str_replace('%base_url%', _::$config['base_url'], $page['content']);
+        $page['content'] = str_replace('%dir_url%', $page['dir_url'], $page['content']);
+        $page['content'] = str_replace('%self_url%', $page['url'], $page['content']);
+        if(!in_array('no-markdown', $page['flags'])) {
+            require __DIR__.'/vendor/michelf/php-markdown/Michelf/MarkdownExtra.inc.php';
+            $page['content'] = \Michelf\MarkdownExtra::defaultTransform($page['content']);
+        }
+    }
+    if($hook) hook('page_parse_content_after', [&$page]);
 }
 
 /**
