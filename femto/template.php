@@ -71,11 +71,16 @@ class Template implements \ArrayAccess,\Iterator {
         $this->template = new FileCache($file, 'template', ['raw'=>True]);
         if(!$this->template->valid()) {
             $template = file_get_contents($file);
+            $template = str_replace('<?==', '<?php echo ', $template);
             /* this ugly thing matches echo tags without tripping on things like
                <?=$x['?>']?> or <?=(true)?'a':b'?>
             */
-            $template = str_replace('<?==', '<?php echo ', $template);
-            $template = preg_replace('`<\?=((?:[^\?"\']|\?[^>]|"(?:[^"]|\\\\")*"|\'(?:[^\']|\\\\\')*\')+)\?>`', '<?php escape($1); ?>', $template);
+            $template = preg_replace(
+            '`<\?='.
+            '((?:[^;\?"\']|\?[^>]|"(?:[^"]|\\\\")*"|\'(?:[^\']|\\\\\')*\')+)'.
+            '((?:;[^;\?"\']|\?[^>]|"(?:[^"]|\\\\")*"|\'(?:[^\']|\\\\\')*\')*)'.
+            '\?>`',
+            '<?php escape($1); $2 ?>', $template);
             $template = str_replace('?><?php', '', $template);
             $template = '<?php namespace femto\template; ?>'.$template;
             $this->template->store($template);

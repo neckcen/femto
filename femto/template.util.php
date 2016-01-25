@@ -24,7 +24,7 @@ function page($url) {
  * @see \femto\Directory::resolve()
  *
  * @param string $url The url to list
- * @return Directory List of Femto pages with content removed
+ * @return Directory Femto directory
  */
 function directory($url) {
     return \femto\Directory::resolve($url);

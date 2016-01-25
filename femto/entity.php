@@ -303,7 +303,7 @@ class Directory extends VirtualDirectory {
      * Map an URL to its corresponding directory and creates it.
      *
      * @param string $url The URL to resolve
-     * @return Directory Femto directory or null
+     * @return Directory Femto directory
      */
     static public function resolve($url) {
         $file = url_to_file($url);
@@ -314,7 +314,7 @@ class Directory extends VirtualDirectory {
      * Create the directory corresponding to a file.
      *
      * @param string $file The file to load
-     * @return Directory Femto directory or null
+     * @return Directory Femto directory
      */
     static public function load($file) {
         if(isset(self::$loaded[$file])) {
