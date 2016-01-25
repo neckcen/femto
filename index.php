@@ -9,7 +9,7 @@
  *
  * @author Sylvain Didelot
  * @license http://opensource.org/licenses/MIT
- * @version 4.1
+ * @version 5.0
  */
 
 
@@ -18,14 +18,16 @@
 
 // Your site's base url. If this file is located at
 // http://example.com/foo/index.php then base url would be /foo/.
+// base url must begin with a single /.
 // Default: Femto attempts to guess it.
 #$config['base_url'] = '';
 
 // Directory in which pages are located. Default: content/.
 #$config['content_dir'] = 'content/';
 
-// Whether cache is enabled. Default: true.
-#$config['cache_enabled'] = true;
+// Whether cache debug mode is enabled. Default: false.
+// In debug mode cache files are created but immediately expire.
+#$config['cache_debug'] = false;
 
 // Directory in which the cache is saved. Default cache/.
 #$config['cache_dir'] = 'cache/';
