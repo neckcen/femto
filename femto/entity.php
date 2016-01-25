@@ -106,6 +106,7 @@ class VirtualPage extends Entity {
         $this->data['content'] = str_replace('femto://self', $this['url'], $this->data['content']);
         $url = isset($this->data['directory']) ? $this->data['directory']['url'] : '';
         $this->data['content'] = str_replace('femto://directory', $url, $this->data['content']);
+        $this->data['content'] = str_replace('femto://theme', Template::$global['theme_url'].'/', $this->data['content']);
         $this->data['content'] = str_replace('femto://', Femto::$config['base_url'].'/', $this->data['content']);
 
         hook('page_content_after', [$this]);
