@@ -59,8 +59,7 @@ attributes of the page. For example:
     Flags: no-markdown,no-theme
     */
 
-These values will be contained in the `{{ current_page }}` variable in themes
-(see below).
+These values will be contained in the `$page` variable in themes (see below).
 
 The `Flags` attribute let you customise how the page behaves. Possible flags are
 (more can be added by plugins):
@@ -72,10 +71,13 @@ The `Flags` attribute let you customise how the page behaves. Possible flags are
 
 There are also certain variables that you can use in your text files:
 
-* `%base_url%` - The URL to your Femto site (without trailing slash)
-* `%dir_url%` - The URL to the directory containing the page (relative to the 
-base url, without trailing slash)
-* `%self_url%` - The URL to the current page (relative to the base url)
+* `femto://` - The URL to your Femto site
+* `femto://directory` - The URL to the directory containing the page
+* `femto://self` - The URL to the current page
+
+For example you could link another page in the same directory like so:
+
+    [another page](femto://directory/another_page)
 
 Themes
 ------
@@ -83,8 +85,8 @@ You can create themes for your Femto installation in the "themes" folder. Check
 out the default theme for an example. You can select your theme by setting the 
 `$config['theme']` variable in `index.php`.
 
-All themes must include an `index.html` file to define the HTML structure of the
-theme. Pages can specify a different template by setting the `template` header:
+All themes must include a default template named `index.html.php`. Pages can 
+specify a different template by setting the `template` header:
 
     /*
     Title: Welcome
@@ -96,47 +98,41 @@ Below are the variables that are available to use in your theme:
 * `$config` - Contains the configuration (e.g. `$config['theme']` outputs
 _default_)
 * `$base_url` - The URL to your Femto site (no trailing slash)
-* `$theme_url` - The URL to the theme directory
+* `$theme_url` - The URL to the theme directory (no trailing slash)
 * `$site_title` - Your site's title (defined in `index.php`)
 * `$page` - Contains the values from the current page
-    * `$page['title']` - HTML escaped
-    * `$page['title_raw']`
-    * `$page['description']` - HTML escaped
-    * `$page['description_raw']`
-    * `$page['robots']` - HTML escaped
-    * `$page['robots_raw']`
+    * `$page['url']`
+    * `$page['title']`
+    * `$page['description']`
+    * `$page['robots']`
     * `$page['content']`
+    * `$page['directory']`
 
-You can also access Femto's functions:
+You can also access some functions:
 
-* `\femto\page($url)` - Return the page corresponding to `$url` or null if
+* `page($url)` - Return the page object corresponding to `$url` or null if
 the page doesn't exist.
-* `\femto\directory($url, $sort, $order)` - Return all pages in the directory
-corresponding to `$url` sorted by `$sort` and ordered by `$order`.<br/>
-`Sort` defaults to _alpha_, no other value possible by default but
-plugins can add more.<br/>
-`Order` defaults to _desc_, other value possible: _asc_.<br/>
+* `directory($url)` - Return the directory object corresponding to `$url` or
+null if the directory doesn't exist. Use the sort method to list the directory.
 Pages are returned by this function without their content.
 
 Example use:
 
     <nav><ul>
-        <?php foreach(\femto\directory('/') as $p): ?>
-        <li><a href="<?php echo $base_url.'/'.$p['url']; ?>"><?php echo $p['title']; ?></a></li>
-        <?php endfor; ?>
+        <?php foreach(directory('/')->sort('alpha', 'desc') as $p): ?>
+            <li><a href="<?=$p['url']?>"><?=$p['title']?></a></li>
+        <?php endforeach; ?>
     </ul></nav>
+
+When using the short echo tags `<?=` the content is automatically escaped. Use
+`<?php echo` or `<?==` to display unescaped content.
 
 Cache
 -----
 Femto features a powerful cache system, each page is only rendered once unless
 you modify it. There is also a cache in place for directory information.
 
-You can disable the cache in two different way. Globally in `index.php` by 
-setting `cache_enabled` to false. This is not recommended due to the negative
-impact on performances for your entire website.
-
-Instead you can disable the cache for a specific page by adding the no-cache
-flag.
+You can disable the cache for a specific page by adding the no-cache flag.
 
     /*
     Title: Welcome
