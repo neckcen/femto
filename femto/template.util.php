@@ -40,5 +40,5 @@ function directory($url) {
  */
 function escape() {
     $string = implode('', func_get_args());
-    echo \femto\escape($string);
+    return \femto\escape($string);
 }
