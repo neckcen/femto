@@ -79,7 +79,7 @@ class Cache {
      * @return mixed Cached data, null if expired or not found
      */
     public function retrieve($modified) {
-        if($this->valid()) {
+        if($this->valid($modified)) {
             $return = file_get_contents($this->cache_file);
             return $this->config['raw'] ? $return : unserialize($return);
         }
