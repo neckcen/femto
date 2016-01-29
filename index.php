@@ -25,9 +25,9 @@
 // Directory in which pages are located. Default: content/.
 #$config['content_dir'] = 'content/';
 
-// Whether cache debug mode is enabled. Default: false.
+// Whether debug mode is enabled. Default: false.
 // In debug mode cache files are created but immediately expire.
-#$config['cache_debug'] = false;
+#$config['debug'] = false;
 
 // Directory in which the cache is saved. Default cache/.
 #$config['cache_dir'] = 'cache/';

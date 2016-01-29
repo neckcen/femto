@@ -1,5 +1,7 @@
 <IfModule mod_rewrite.c>
 RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f [OR]
+RewriteCond %{REQUEST_URI} ^/content [OR]
+RewriteCond %{REQUEST_URI} ^/cache
 RewriteRule . index.php [L]
 </IfModule>

@@ -31,7 +31,7 @@ class Femto {
         'site_title' => 'Femto',
         'base_url' => null,
         'content_dir' => 'content',
-        'cache_debug' => false,
+        'debug' => false,
         'cache_dir' => 'cache',
         'theme' => 'default',
         'theme_dir' => 'themes',
@@ -73,13 +73,15 @@ function run($config=[]) {
     $config['base_url'] = rtrim($config['base_url'], '/');
     $config['content_dir'] = realpath($config['content_dir']);
     $config['cache_dir'] = realpath($config['cache_dir']);
+    $config['debug'] = (bool) $config['debug'];
     $config['theme_dir'] = rtrim($config['theme_dir'], '/');
     $config['theme_base_url'] = $config['theme_base_url'] === null ?
       $config['base_url'] : rtrim($config['theme_base_url'], '/');
     $config['plugin_dir'] = realpath($config['plugin_dir']);
     $config['plugin_enabled'] = empty($config['plugin_enabled']) ? [] :
         explode(',', strtolower(str_replace(' ', '', $config['plugin_enabled'])));
-    Cache::$default['debug'] = $config['cache_debug'];
+
+    Cache::$default['debug'] = $config['debug'];
     Cache::$default['dir'] = $config['cache_dir'];
 
     Template::$default['dir'] = realpath($config['theme_dir'].'/'.$config['theme']);
