@@ -78,7 +78,7 @@ class Template implements \ArrayAccess,\Iterator {
                     if($t[0] === T_OPEN_TAG_WITH_ECHO) {
                         // don't reopen if last tag was closing
                         if(isset($token[$i-1][0]) && $token[$i-1][0] === T_CLOSE_TAG) {
-                            $template .= 'echo ';
+                            $template .= substr($t[1], 3).'echo ';
                         } else {
                             $template .= $t[1];
                         }
@@ -89,7 +89,9 @@ class Template implements \ArrayAccess,\Iterator {
 
                     } else if ($t[0] === T_OPEN_TAG) {
                         // don't reopen if last tag was closing
-                        if(!isset($token[$i-1][0]) || $token[$i-1][0] !== T_CLOSE_TAG) {
+                        if(isset($token[$i-1][0]) && $token[$i-1][0] === T_CLOSE_TAG) {
+                            $template .= substr($t[1], 5);
+                        } else {
                             $template .= $t[1];
                         }
 
