@@ -136,7 +136,7 @@ class Page extends VirtualPage {
         $cache = new FileCache($file, 'femto_page_meta');
         if(($this->data = $cache->retrieve()) == null) {
             $content = file_get_contents($file);
-            $this->data = [];
+            $this->data = self::$header;
             $this->data['file'] = $file;
             $this->data['url'] = file_to_url($file);
             $this->data['directory'] = Directory::load(dirname($this->data['file']));

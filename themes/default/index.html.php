@@ -2,6 +2,7 @@
 <html lang="en" class="no-js">
 <head>
 	<meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
 	<title><?php if($page['title']): ?><?=$page['title'].' - '?><?php endif; ?><?=$site_title?></title>
     <?php if($page['description']): ?><meta name="description" content="<?=$page['description']?>"><?php endif; ?>

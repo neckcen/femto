@@ -77,7 +77,7 @@ function run($config=[]) {
     $config['theme_dir'] = rtrim($config['theme_dir'], '/');
     $config['theme_base_url'] = $config['theme_base_url'] === null ?
       $config['base_url'] : rtrim($config['theme_base_url'], '/');
-    $config['plugin_dir'] = realpath($config['plugin_dir']);
+    $config['plugin_dir'] = rtrim($config['plugin_dir'], '/');
     $config['plugin_enabled'] = empty($config['plugin_enabled']) ? [] :
         explode(',', strtolower(str_replace(' ', '', $config['plugin_enabled'])));
 
@@ -161,6 +161,9 @@ function run($config=[]) {
     if(!$page instanceof VirtualPage) {
         header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
         $page = Page::resolve('/404');
+        if(!$page) {
+            die('404.md missing');
+        }
     }
     hook('request_complete', [$page]);
 
